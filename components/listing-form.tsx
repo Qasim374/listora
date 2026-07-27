@@ -9,7 +9,16 @@ import {
   MAX_IMAGES_PER_LISTING,
   MAX_IMAGE_BYTES,
 } from '@/lib/blob'
+import { checkPlausibility } from '@/lib/plausibility'
 import { cn } from '@/lib/utils'
+
+const EMPTY_FACTS = { price: '', beds: '', baths: '', sqft: '' }
+
+function toNumberOrNull(value: string): number | null {
+  if (value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
 
 type UploadedImage = {
   localId: string
@@ -23,6 +32,7 @@ type UploadedImage = {
 
 export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
   const [images, setImages] = useState<UploadedImage[]>([])
+  const [facts, setFacts] = useState(EMPTY_FACTS)
   const [coverId, setCoverId] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -32,6 +42,19 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const uploading = images.some((image) => image.status === 'uploading')
+
+  // Live typo check on the numbers. Warnings only — they never block saving.
+  const warnings = checkPlausibility({
+    price: toNumberOrNull(facts.price),
+    beds: toNumberOrNull(facts.beds),
+    baths: toNumberOrNull(facts.baths),
+    sqft: toNumberOrNull(facts.sqft),
+  })
+
+  function setFact(key: keyof typeof EMPTY_FACTS) {
+    return (event: React.ChangeEvent<HTMLInputElement>) =>
+      setFacts((current) => ({ ...current, [key]: event.target.value }))
+  }
 
   async function addFiles(files: File[]) {
     setFormError(null)
@@ -280,19 +303,59 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
                 min={0}
                 step={1}
                 placeholder="7450000"
+                value={facts.price}
+                onChange={setFact('price')}
                 className="input"
               />
             </Field>
             <Field name="beds" label="Bedrooms" error={fieldErrors.beds}>
-              <input id="beds" name="beds" type="number" min={0} step={1} className="input" />
+              <input
+                id="beds"
+                name="beds"
+                type="number"
+                min={0}
+                step={1}
+                value={facts.beds}
+                onChange={setFact('beds')}
+                className="input"
+              />
             </Field>
             <Field name="baths" label="Bathrooms" error={fieldErrors.baths}>
-              <input id="baths" name="baths" type="number" min={0} step={0.5} className="input" />
+              <input
+                id="baths"
+                name="baths"
+                type="number"
+                min={0}
+                step={0.5}
+                value={facts.baths}
+                onChange={setFact('baths')}
+                className="input"
+              />
             </Field>
             <Field name="sqft" label="Living area (m²)" error={fieldErrors.sqft}>
-              <input id="sqft" name="sqft" type="number" min={0} step={1} className="input" />
+              <input
+                id="sqft"
+                name="sqft"
+                type="number"
+                min={0}
+                step={1}
+                placeholder="98"
+                value={facts.sqft}
+                onChange={setFact('sqft')}
+                className="input"
+              />
             </Field>
           </div>
+
+          {warnings.length > 0 ? (
+            <ul className="mt-3 space-y-1.5 rounded-lg border border-accent bg-accent-soft/20 px-4 py-3">
+              {warnings.map((warning) => (
+                <li key={`${warning.field}-${warning.message}`} className="text-sm text-ink">
+                  <span className="font-medium">Check this:</span> {warning.message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </section>
 

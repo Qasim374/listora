@@ -19,7 +19,12 @@
       "PowerShell(npx tsx scripts/tmp-latency.ts)",
       "PowerShell(\"removed temp latency script\")",
       "PowerShell(npx tsx scripts/tmp-vision-probe.ts)",
-      "PowerShell(if \\($?\\) { \"typecheck ok\" })"
+      "PowerShell(if \\($?\\) { \"typecheck ok\" })",
+      "PowerShell(npx tsx -e \"import{config}from'dotenv';config\\({path:'.env.local'}\\);\\(async\\(\\)=>{const{db}=await import\\('./lib/db'\\);const{listings}=await import\\('./lib/db/schema'\\);const{desc}=await import\\('drizzle-orm'\\);const r=await db.select\\({slug:listings.slug,address:listings.address,price:listings.price,beds:listings.beds,baths:listings.baths,sqft:listings.sqft}\\).from\\(listings\\).orderBy\\(desc\\(listings.createdAt\\)\\).limit\\(3\\);r.forEach\\(x=>console.log\\(JSON.stringify\\(x,null,0\\)\\)\\)}\\)\\(\\)\" 2>&1)",
+      "PowerShell(npm run check:plausibility)",
+      "PowerShell(try { $r = Invoke-WebRequest 'http://localhost:3000/dashboard/listings/new' -UseBasicParsing -TimeoutSec 90; \"form page HTTP $\\($r.StatusCode\\)  \\($\\($r.Content.Length\\) bytes\\)\" } catch { \"FAILED $\\($_.Exception.Message\\)\" })",
+      "PowerShell(npx tsx scripts/tmp-length-test.ts)",
+      "PowerShell(npm run check:e2e 2>&1)"
     ]
   }
 }

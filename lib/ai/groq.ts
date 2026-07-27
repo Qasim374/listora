@@ -3,6 +3,9 @@ import OpenAI from 'openai'
 import { LISTING_COPY_JSON_SCHEMA, SYSTEM_PROMPT, buildUserPrompt } from './prompt'
 import { AiGenerationError, listingCopySchema, type ListingCopy, type ListingInput } from './types'
 
+/** Generous enough that a three-paragraph description is never cut mid-sentence. */
+const MAX_TOKENS = 2400
+
 /**
  * GroqCloud — fast inference over open-weight models (Llama, gpt-oss, Qwen).
  *
@@ -40,7 +43,7 @@ export async function generateWithGroq(input: ListingInput): Promise<ListingCopy
   try {
     const completion = await groq.chat.completions.create({
       model,
-      max_tokens: 1600,
+      max_tokens: MAX_TOKENS,
       messages,
       // Schema-enforced output where the model supports it.
       response_format: {
@@ -65,7 +68,7 @@ export async function generateWithGroq(input: ListingInput): Promise<ListingCopy
     try {
       const completion = await groq.chat.completions.create({
         model,
-        max_tokens: 1600,
+        max_tokens: MAX_TOKENS,
         messages: [
           messages[0],
           {
@@ -109,6 +112,22 @@ function shouldRetryWithoutSchema(error: unknown): boolean {
 }
 
 /**
+ * Rewrites the model's paragraph breaks into blank-line-separated form.
+ *
+ * The model separates paragraphs with a single newline (often followed by
+ * indentation), but the public page splits on blank lines. Without this, a
+ * well-structured three-paragraph description renders as one solid wall of text.
+ * Normalising here means every provider's output is consistent downstream.
+ */
+function normalizeParagraphs(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .join('\n\n')
+}
+
+/**
  * Strip stray markdown fences, parse, then validate. Never trust the model to
  * have produced the right shape — open-weight models are especially prone to
  * wrapping JSON in ```json fences or prepending a sentence.
@@ -140,5 +159,9 @@ export function parseListingCopy(raw: string): ListingCopy {
     )
   }
 
-  return result.data
+  return {
+    headline: result.data.headline.trim(),
+    description: normalizeParagraphs(result.data.description),
+    highlights: result.data.highlights.map((highlight) => highlight.trim()),
+  }
 }
