@@ -2,6 +2,7 @@ import { asc, eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { ListingGallery } from '@/components/listing-gallery'
 import { db } from '@/lib/db'
 import { listingImages, listings } from '@/lib/db/schema'
 import { formatPrice, formatSqft } from '@/lib/utils'
@@ -66,19 +67,24 @@ export default async function PublicListingPage({ params }: PageProps) {
   const { listing, images } = data
   const highlights = listing.aiHighlights ?? []
 
+  // Cover photo leads, then whatever order the agent uploaded in.
+  const orderedImages = [...images].sort(
+    (a, b) => Number(b.isCover) - Number(a.isCover) || a.sortOrder - b.sortOrder,
+  )
+
+  const hasSpecs = listing.beds !== null || listing.baths !== null || listing.sqft !== null
+
   return (
     <main className="min-h-screen bg-sand-100 pb-20">
-      {/* Gallery/carousel arrives in step 6 — placeholder keeps layout honest */}
-      <div className="aspect-[16/10] w-full bg-brand-800 sm:aspect-[21/9]">
-        {images.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-brand-200">
-            Photos coming soon
-          </div>
-        ) : null}
-      </div>
+      <ListingGallery
+        images={orderedImages.map((image) => ({ id: image.id, url: image.url }))}
+        alt={listing.aiHeadline ?? listing.address}
+      />
 
       <article className="mx-auto max-w-3xl px-6">
-        <div className="-mt-10 rounded-xl border border-sand-200 bg-sand-50 p-6 shadow-sm sm:p-8">
+        {/* relative+z-10 so the card paints cleanly over the photo it overlaps,
+            and the smaller offset keeps the address clear of the image edge. */}
+        <div className="relative z-10 -mt-6 rounded-xl border border-sand-200 bg-sand-50 p-6 shadow-sm sm:p-8">
           <p className="text-sm text-ink-muted">{listing.address}</p>
 
           <h1 className="mt-2 font-display text-3xl leading-tight text-brand-900 sm:text-4xl">
@@ -89,20 +95,30 @@ export default async function PublicListingPage({ params }: PageProps) {
             {formatPrice(listing.price)}
           </p>
 
-          <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-sand-200 pt-6 text-sm">
-            <div>
-              <dt className="text-ink-muted">Bedrooms</dt>
-              <dd className="mt-0.5 font-medium text-ink">{listing.beds ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Bathrooms</dt>
-              <dd className="mt-0.5 font-medium text-ink">{listing.baths ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Living area</dt>
-              <dd className="mt-0.5 font-medium text-ink">{formatSqft(listing.sqft)}</dd>
-            </div>
-          </dl>
+          {/* Hidden entirely when the agent supplied none of these — a row of
+              three em-dashes reads as a broken page, not as "not specified". */}
+          {hasSpecs ? (
+            <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-sand-200 pt-6 text-sm">
+              {listing.beds !== null ? (
+                <div>
+                  <dt className="text-ink-muted">Bedrooms</dt>
+                  <dd className="mt-0.5 font-medium text-ink">{listing.beds}</dd>
+                </div>
+              ) : null}
+              {listing.baths !== null ? (
+                <div>
+                  <dt className="text-ink-muted">Bathrooms</dt>
+                  <dd className="mt-0.5 font-medium text-ink">{listing.baths}</dd>
+                </div>
+              ) : null}
+              {listing.sqft !== null ? (
+                <div>
+                  <dt className="text-ink-muted">Living area</dt>
+                  <dd className="mt-0.5 font-medium text-ink">{formatSqft(listing.sqft)}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
         </div>
 
         {highlights.length > 0 ? (

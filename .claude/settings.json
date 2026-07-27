@@ -15,7 +15,11 @@
       "PowerShell(npm install @vercel/blob --no-audit --no-fund)",
       "PowerShell(npx tsx \"C:\\\\Users\\\\Bangash\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Bangash-Desktop-RealEstateTool\\\\fe2282f6-8403-4aa9-bff4-54aa6cf1a8f3\\\\scratchpad\\\\check-validation.ts\")",
       "PowerShell(npm run check:validation)",
-      "PowerShell(npx tsx scripts/e2e-check.ts)"
+      "PowerShell(npx tsx scripts/e2e-check.ts)",
+      "PowerShell(npx tsx scripts/tmp-latency.ts)",
+      "PowerShell(\"removed temp latency script\")",
+      "PowerShell(npx tsx scripts/tmp-vision-probe.ts)",
+      "PowerShell(if \\($?\\) { \"typecheck ok\" })"
     ]
   }
 }
