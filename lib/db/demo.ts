@@ -58,6 +58,16 @@ async function main() {
       propertyType: 'apartment',
       yearBuilt: 1928,
       monthlyFee: 3_450,
+      features: [
+        'South-west facing balcony',
+        'Renovated kitchen (2021)',
+        'Lift in building',
+        'Original parquet flooring',
+        'Storage room in basement',
+        'Dishwasher',
+        'Shared laundry',
+        'Top floor, corner position',
+      ],
       rawDescription:
         '3 rooms, top floor, corner apartment. Renovated kitchen 2021. Balcony faces south-west. Building from 1928, lift installed 2019. Close to Karlaplan metro.',
       aiHeadline: 'A top-floor corner apartment where the afternoon light lasts until dinner',

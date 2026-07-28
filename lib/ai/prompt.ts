@@ -52,6 +52,9 @@ export function buildUserPrompt(input: ListingInput): string {
   if (input.sqft != null) facts.push(`Living area: ${input.sqft} m²`)
   if (input.lotSize != null) facts.push(`Plot size: ${input.lotSize} m²`)
   if (input.yearBuilt != null) facts.push(`Year built: ${input.yearBuilt}`)
+  if (input.features && input.features.length > 0) {
+    facts.push(`Features the agent listed: ${input.features.join(', ')}`)
+  }
 
   return `Property facts:
 ${facts.join('\n')}

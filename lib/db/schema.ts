@@ -72,6 +72,9 @@ export const listings = pgTable('listings', {
    */
   monthlyFee: integer('monthly_fee'),
 
+  /** Agent-entered amenities: "Balcony", "Fireplace", "Dishwasher", ... */
+  features: jsonb('features').$type<string[]>(),
+
   rawDescription: text('raw_description').notNull(),
 
   // AI-generated, agent-editable

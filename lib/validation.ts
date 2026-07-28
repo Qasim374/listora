@@ -84,6 +84,23 @@ export const listingFormSchema = z.object({
     z.number().int('Monthly fee must be a whole number').min(0).max(500_000),
   ),
 
+  // Submitted as one-per-line text; blanks and duplicates are dropped here so
+  // the display never has to defend against them.
+  features: z.preprocess(
+    (value) =>
+      typeof value === 'string'
+        ? Array.from(
+            new Set(
+              value
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0),
+            ),
+          )
+        : value,
+    z.array(z.string().min(2).max(80)).max(40, 'Up to 40 features').default([]),
+  ),
+
   images: z
     .array(
       z.object({

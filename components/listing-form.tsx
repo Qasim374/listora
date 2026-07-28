@@ -164,6 +164,7 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
       yearBuilt: String(data.get('yearBuilt') ?? ''),
       lotSize: String(data.get('lotSize') ?? ''),
       monthlyFee: String(data.get('monthlyFee') ?? ''),
+      features: String(data.get('features') ?? ''),
       images: images
         .filter((image) => image.status === 'done' && image.url)
         .map((image) => ({ url: image.url as string, isCover: image.localId === coverId })),
@@ -431,6 +432,22 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
       </section>
 
       {/* ----------------------------------------------------------------- notes */}
+      <section>
+        <h2 className="font-display text-lg text-brand-900">Features</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          One per line. These appear as a checklist on the listing page and are given to the AI.
+        </p>
+        <Field name="features" label="" error={fieldErrors.features}>
+          <textarea
+            id="features"
+            name="features"
+            rows={5}
+            placeholder={'Balcony\nDishwasher\nFireplace\nLift in building\nStorage in basement'}
+            className="input"
+          />
+        </Field>
+      </section>
+
       <section>
         <h2 className="font-display text-lg text-brand-900">Your notes</h2>
         <p className="mt-1 text-sm text-ink-soft">

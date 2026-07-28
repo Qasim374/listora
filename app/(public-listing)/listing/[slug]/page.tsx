@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 
 import { ListingContact } from '@/components/listing-contact'
 import { ListingGallery } from '@/components/listing-gallery'
+import { ListingShare } from '@/components/listing-share'
+import { MortgageEstimate } from '@/components/mortgage-estimate'
 import { ViewTracker } from '@/components/view-tracker'
 import { db } from '@/lib/db'
 import { listingImages, listings } from '@/lib/db/schema'
@@ -78,6 +80,8 @@ export default async function PublicListingPage({ params }: PageProps) {
   const hasSpecs = listing.beds !== null || listing.baths !== null || listing.sqft !== null
 
   const typeLabel = propertyTypeLabel(listing.propertyType)
+  const features = listing.features ?? []
+  const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/listing/${listing.slug}`
 
   const daysListed = Math.max(
     0,
@@ -224,14 +228,77 @@ export default async function PublicListingPage({ params }: PageProps) {
           </dl>
         </section>
 
-        <section className="card mt-12 text-center">
+        {features.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="font-display text-xl text-brand-900">Features</h2>
+            <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+              {features.map((feature) => (
+                <li key={feature} className="flex items-start gap-2.5 text-sm text-ink-soft">
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden
+                    className="mt-0.5 h-4 w-4 shrink-0 text-brand-500"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {listing.price !== null && listing.price > 0 ? (
+          <MortgageEstimate price={listing.price} monthlyFee={listing.monthlyFee} />
+        ) : null}
+
+        <section className="mt-10">
+          <h2 className="font-display text-xl text-brand-900">Location</h2>
+          <div className="mt-4 overflow-hidden rounded-xl border border-sand-200">
+            {/* Keyless Google Maps embed. No geocoding step and no API key to
+                manage; the address string is all it needs. */}
+            <iframe
+              title={`Map of ${listing.address}`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.address)}&output=embed`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="h-72 w-full border-0"
+            />
+          </div>
+          <p className="mt-2 text-xs text-ink-muted">
+            Map position is approximate, based on the address supplied by the agent.
+          </p>
+        </section>
+
+        <section className="card mt-12 text-center" id="contact">
           <ListingContact slug={listing.slug} />
         </section>
 
-        <p className="mt-8 text-center text-xs text-ink-muted">
-          Listing prepared with Listora. Information supplied by the selling agent.
-        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-sand-200 pt-6">
+          <p className="text-xs text-ink-muted">
+            Listing prepared with Listora. Information supplied by the selling agent.
+          </p>
+          <ListingShare url={publicUrl} title={listing.aiHeadline ?? listing.address} />
+        </div>
       </article>
+
+      {/* Sticky price + contact bar on phones, so the CTA is always one tap away */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-sand-200 bg-sand-50/95 px-4 py-3 backdrop-blur sm:hidden print:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-xs text-ink-muted">{listing.address}</p>
+            <p className="font-medium text-brand-700">{formatPrice(listing.price)}</p>
+          </div>
+          <a href="#contact" className="btn-primary shrink-0">
+            Contact agent
+          </a>
+        </div>
+      </div>
 
       <ViewTracker slug={listing.slug} />
     </main>

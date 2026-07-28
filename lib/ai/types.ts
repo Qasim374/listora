@@ -12,6 +12,7 @@ export type ListingInput = {
   yearBuilt?: number | null
   lotSize?: number | null
   monthlyFee?: number | null
+  features?: string[] | null
 }
 
 /**

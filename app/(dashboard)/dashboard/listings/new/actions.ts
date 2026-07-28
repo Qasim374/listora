@@ -65,6 +65,7 @@ export async function createListing(raw: unknown): Promise<CreateListingResult> 
         yearBuilt: values.yearBuilt,
         lotSize: values.lotSize,
         monthlyFee: values.monthlyFee,
+        features: values.features,
         rawDescription: values.rawDescription,
         status: 'draft',
       })

@@ -61,6 +61,7 @@ export async function generateCopy(listingId: string): Promise<ActionResult> {
       yearBuilt: listing.yearBuilt,
       lotSize: listing.lotSize,
       monthlyFee: listing.monthlyFee,
+      features: listing.features,
     })
 
     await db
