@@ -61,6 +61,10 @@ export async function createListing(raw: unknown): Promise<CreateListingResult> 
         // numeric columns round-trip as strings in Drizzle
         baths: values.baths === null ? null : String(values.baths),
         sqft: values.sqft,
+        propertyType: values.propertyType,
+        yearBuilt: values.yearBuilt,
+        lotSize: values.lotSize,
+        monthlyFee: values.monthlyFee,
         rawDescription: values.rawDescription,
         status: 'draft',
       })

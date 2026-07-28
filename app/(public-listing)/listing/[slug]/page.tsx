@@ -2,9 +2,12 @@ import { asc, eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { ListingContact } from '@/components/listing-contact'
 import { ListingGallery } from '@/components/listing-gallery'
+import { ViewTracker } from '@/components/view-tracker'
 import { db } from '@/lib/db'
 import { listingImages, listings } from '@/lib/db/schema'
+import { propertyTypeLabel } from '@/lib/property-types'
 import { formatPrice, formatSqft } from '@/lib/utils'
 
 type PageProps = {
@@ -74,6 +77,40 @@ export default async function PublicListingPage({ params }: PageProps) {
 
   const hasSpecs = listing.beds !== null || listing.baths !== null || listing.sqft !== null
 
+  const typeLabel = propertyTypeLabel(listing.propertyType)
+
+  const daysListed = Math.max(
+    0,
+    Math.floor((Date.now() - listing.createdAt.getTime()) / 86_400_000),
+  )
+
+  // Buyers in Sweden compare on kr/m², so derive it rather than making the
+  // agent calculate it. Only meaningful when both numbers are present.
+  const pricePerSqm =
+    listing.price !== null && listing.sqft !== null && listing.sqft > 0
+      ? Math.round(listing.price / listing.sqft)
+      : null
+
+  /**
+   * The full detail table, HAR-style. Built as data so the markup stays flat and
+   * rows with no value simply never appear — an empty row reads as broken.
+   */
+  const details: Array<{ label: string; value: string }> = [
+    typeLabel && { label: 'Property type', value: typeLabel },
+    // Bedrooms, bathrooms and living area are deliberately absent: they already
+    // appear in the hero above, and repeating them makes the table look padded.
+    listing.lotSize !== null && { label: 'Plot size', value: formatSqft(listing.lotSize) },
+    listing.yearBuilt !== null && { label: 'Year built', value: String(listing.yearBuilt) },
+    listing.monthlyFee !== null && {
+      label: 'Monthly fee',
+      value: formatPrice(listing.monthlyFee),
+    },
+    pricePerSqm !== null && { label: 'Price per m²', value: formatPrice(pricePerSqm) },
+    // Derived from the id, not the slug: a slug tail like "TAN-14" is a
+    // meaningless fragment of the address, while the id is always clean hex.
+    { label: 'Reference', value: `LST-${listing.id.replace(/-/g, '').slice(0, 6).toUpperCase()}` },
+  ].filter((row): row is { label: string; value: string } => Boolean(row))
+
   return (
     <main className="min-h-screen bg-sand-100 pb-20">
       <ListingGallery
@@ -85,15 +122,37 @@ export default async function PublicListingPage({ params }: PageProps) {
         {/* relative+z-10 so the card paints cleanly over the photo it overlaps,
             and the smaller offset keeps the address clear of the image edge. */}
         <div className="relative z-10 -mt-6 rounded-xl border border-sand-200 bg-sand-50 p-6 shadow-sm sm:p-8">
-          <p className="text-sm text-ink-muted">{listing.address}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-brand-700">
+              For sale
+            </span>
+            {typeLabel ? (
+              <span className="rounded-full bg-sand-200 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                {typeLabel}
+              </span>
+            ) : null}
+            <span className="text-xs text-ink-muted">
+              {daysListed === 0 ? 'Listed today' : `Listed ${daysListed} days ago`}
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm text-ink-muted">{listing.address}</p>
 
           <h1 className="mt-2 font-display text-3xl leading-tight text-brand-900 sm:text-4xl">
             {listing.aiHeadline ?? listing.address}
           </h1>
 
-          <p className="mt-4 text-2xl font-medium text-brand-700">
-            {formatPrice(listing.price)}
-          </p>
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <p className="text-3xl font-medium text-brand-700">{formatPrice(listing.price)}</p>
+            {listing.monthlyFee !== null ? (
+              <p className="text-sm text-ink-muted">
+                + {formatPrice(listing.monthlyFee)} / month fee
+              </p>
+            ) : null}
+            {pricePerSqm !== null ? (
+              <p className="text-sm text-ink-muted">{formatPrice(pricePerSqm)} / m²</p>
+            ) : null}
+          </div>
 
           {/* Hidden entirely when the agent supplied none of these — a row of
               three em-dashes reads as a broken page, not as "not specified". */}
@@ -146,16 +205,35 @@ export default async function PublicListingPage({ params }: PageProps) {
           </section>
         ) : null}
 
-        <section className="card mt-12 text-center">
-          <h2 className="font-display text-xl text-brand-900">Interested in a viewing?</h2>
-          <p className="mt-2 text-sm text-ink-soft">
-            Get in touch with the agent to arrange a time.
-          </p>
-          <button type="button" className="btn-primary mt-5" disabled>
-            Contact agent
-          </button>
+        <section className="mt-10">
+          <h2 className="font-display text-xl text-brand-900">Property details</h2>
+          <dl className="mt-4 overflow-hidden rounded-xl border border-sand-200 bg-sand-50">
+            {details.map((row, index) => (
+              <div
+                key={row.label}
+                className={
+                  index % 2 === 0
+                    ? 'flex justify-between gap-4 px-5 py-3 text-sm'
+                    : 'flex justify-between gap-4 bg-sand-100/70 px-5 py-3 text-sm'
+                }
+              >
+                <dt className="text-ink-muted">{row.label}</dt>
+                <dd className="text-right font-medium text-ink">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
+
+        <section className="card mt-12 text-center">
+          <ListingContact slug={listing.slug} />
+        </section>
+
+        <p className="mt-8 text-center text-xs text-ink-muted">
+          Listing prepared with Listora. Information supplied by the selling agent.
+        </p>
       </article>
+
+      <ViewTracker slug={listing.slug} />
     </main>
   )
 }

@@ -62,6 +62,18 @@ Then, in order:
 Use `db:push` while iterating on the schema. Switch to `db:generate` + committed migrations
 before you have real customer data.
 
+**Always read what `db:push` says it will execute.** Neon runs PostgreSQL 18, which catalogues
+NOT NULL constraints in `pg_constraint` (a PG17 change). `drizzle-kit` 0.30 did not understand
+`contype = 'n'` and generated `DROP CONSTRAINT "listings_..._not_null"` for every one of them —
+i.e. a push that would have silently stripped NOT NULL off the whole table. Fixed by upgrading
+to `drizzle-kit` 0.31+, which reports "No changes detected" correctly. If you ever downgrade,
+or see unexplained `DROP CONSTRAINT` lines, stop and check the tool version against the server
+version.
+
+Note also that `drizzle-kit generate` in this repo produces a full `CREATE TABLE` baseline,
+because the tables were created with `push` and there is no migration history in `drizzle/`.
+Don't apply that blindly against the live database.
+
 ## Architecture notes
 
 **Auth is currently skipped.** `SKIP_AUTH=true` makes `getCurrentAgent()` resolve to the
@@ -101,11 +113,24 @@ and works in every Vercel runtime including Edge. It does not support interactiv
 transactions — if a route needs one, that route switches to `neon-serverless` on the Node
 runtime.
 
+**Agent contact details are fetched, not rendered.** `/api/listings/[slug]/contact` serves the
+agent's name, email and phone only for **published** listings, and the public page requests it
+on click. Rendering an email into the HTML of a page designed to be shared widely hands it to
+every crawler that indexes it. Drafts return 404 so an unpublished listing leaks nothing.
+
 ## Not built yet
 
-Steps 5–9 of the plan: AI generation UI with preview/edit + publish, public gallery
-carousel, view counting, dashboard edit/delete, Stripe billing, full marketing page.
+Steps 7–9 of the plan: dashboard edit/delete of listings, image reordering, Stripe billing,
+and the marketing landing page (still a placeholder hero).
 
-Known gaps in what exists: the "Generate copy" button on a draft is disabled, drafts have no
-publish action, and image reordering is drop-order only (cover is selectable, position is
-not).
+Known gaps in what exists: listings can be created and published but not edited or deleted
+afterwards, image order is upload-order only (the cover is selectable, position is not), and
+the AI cannot see uploaded photos — copy comes from the agent's typed notes alone, because no
+vision-capable model is available on the Groq key.
+
+**View counts filter bots.** `/api/listings/[slug]/view` is POSTed by the browser after the
+page renders — not incremented during render, which would freeze under caching and
+double-count under Strict Mode. It rejects known crawler user-agents and any agent shorter
+than 16 characters. That last rule exists because Node's own `fetch` user-agent was being
+counted as a buyer; WhatsApp, Facebook and Google each fetch a shared link to build a preview
+card, so without filtering one shared message reads as three views.

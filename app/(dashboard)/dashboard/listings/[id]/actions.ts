@@ -57,6 +57,10 @@ export async function generateCopy(listingId: string): Promise<ActionResult> {
       // numeric comes back as a string from Postgres
       baths: listing.baths === null ? null : Number(listing.baths),
       sqft: listing.sqft,
+      propertyType: listing.propertyType,
+      yearBuilt: listing.yearBuilt,
+      lotSize: listing.lotSize,
+      monthlyFee: listing.monthlyFee,
     })
 
     await db

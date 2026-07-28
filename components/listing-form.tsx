@@ -10,9 +10,19 @@ import {
   MAX_IMAGE_BYTES,
 } from '@/lib/blob'
 import { checkPlausibility } from '@/lib/plausibility'
+import { PROPERTY_TYPES } from '@/lib/property-types'
 import { cn } from '@/lib/utils'
 
-const EMPTY_FACTS = { price: '', beds: '', baths: '', sqft: '' }
+const EMPTY_FACTS = {
+  price: '',
+  beds: '',
+  baths: '',
+  sqft: '',
+  propertyType: '',
+  yearBuilt: '',
+  lotSize: '',
+  monthlyFee: '',
+}
 
 function toNumberOrNull(value: string): number | null {
   if (value.trim() === '') return null
@@ -52,7 +62,7 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
   })
 
   function setFact(key: keyof typeof EMPTY_FACTS) {
-    return (event: React.ChangeEvent<HTMLInputElement>) =>
+    return (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setFacts((current) => ({ ...current, [key]: event.target.value }))
   }
 
@@ -150,6 +160,10 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
       beds: String(data.get('beds') ?? ''),
       baths: String(data.get('baths') ?? ''),
       sqft: String(data.get('sqft') ?? ''),
+      propertyType: String(data.get('propertyType') ?? ''),
+      yearBuilt: String(data.get('yearBuilt') ?? ''),
+      lotSize: String(data.get('lotSize') ?? ''),
+      monthlyFee: String(data.get('monthlyFee') ?? ''),
       images: images
         .filter((image) => image.status === 'done' && image.url)
         .map((image) => ({ url: image.url as string, isCover: image.localId === coverId })),
@@ -342,6 +356,63 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
                 placeholder="98"
                 value={facts.sqft}
                 onChange={setFact('sqft')}
+                className="input"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Field name="propertyType" label="Property type" error={fieldErrors.propertyType}>
+              <select
+                id="propertyType"
+                name="propertyType"
+                value={facts.propertyType}
+                onChange={setFact('propertyType')}
+                className="input"
+              >
+                <option value="">Not specified</option>
+                {PROPERTY_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field name="yearBuilt" label="Year built" error={fieldErrors.yearBuilt}>
+              <input
+                id="yearBuilt"
+                name="yearBuilt"
+                type="number"
+                min={1200}
+                step={1}
+                placeholder="1928"
+                value={facts.yearBuilt}
+                onChange={setFact('yearBuilt')}
+                className="input"
+              />
+            </Field>
+            <Field name="lotSize" label="Plot size (m²)" error={fieldErrors.lotSize}>
+              <input
+                id="lotSize"
+                name="lotSize"
+                type="number"
+                min={0}
+                step={1}
+                value={facts.lotSize}
+                onChange={setFact('lotSize')}
+                className="input"
+              />
+            </Field>
+            <Field name="monthlyFee" label="Monthly fee (SEK)" error={fieldErrors.monthlyFee}>
+              <input
+                id="monthlyFee"
+                name="monthlyFee"
+                type="number"
+                min={0}
+                step={1}
+                placeholder="3450"
+                value={facts.monthlyFee}
+                onChange={setFact('monthlyFee')}
                 className="input"
               />
             </Field>

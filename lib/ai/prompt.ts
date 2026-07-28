@@ -1,3 +1,4 @@
+import { propertyTypeLabel } from '../property-types'
 import type { ListingInput } from './types'
 
 /**
@@ -43,10 +44,14 @@ Return only what the requested JSON shape asks for.`
 export function buildUserPrompt(input: ListingInput): string {
   const facts: string[] = [`Address: ${input.address}`]
 
+  if (input.propertyType) facts.push(`Property type: ${propertyTypeLabel(input.propertyType)}`)
   if (input.price != null) facts.push(`Asking price: ${input.price} SEK`)
+  if (input.monthlyFee != null) facts.push(`Monthly fee: ${input.monthlyFee} SEK`)
   if (input.beds != null) facts.push(`Bedrooms: ${input.beds}`)
   if (input.baths != null) facts.push(`Bathrooms: ${input.baths}`)
   if (input.sqft != null) facts.push(`Living area: ${input.sqft} m²`)
+  if (input.lotSize != null) facts.push(`Plot size: ${input.lotSize} m²`)
+  if (input.yearBuilt != null) facts.push(`Year built: ${input.yearBuilt}`)
 
   return `Property facts:
 ${facts.join('\n')}

@@ -8,6 +8,10 @@ export type ListingInput = {
   beds?: number | null
   baths?: number | null
   sqft?: number | null
+  propertyType?: string | null
+  yearBuilt?: number | null
+  lotSize?: number | null
+  monthlyFee?: number | null
 }
 
 /**

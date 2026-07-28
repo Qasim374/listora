@@ -24,6 +24,9 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
+  // Shown to buyers on the public listing page. Nullable: an agent may prefer
+  // to be contacted by email only.
+  phone: text('phone'),
   // Matches a key in lib/plans.ts — 'free' | 'starter' | 'pro'
   subscriptionTier: text('subscription_tier').notNull().default('free'),
   stripeCustomerId: text('stripe_customer_id').unique(),
@@ -56,6 +59,19 @@ export const listings = pgTable('listings', {
   // numeric so "1.5 baths" is representable
   baths: numeric('baths', { precision: 3, scale: 1 }),
   sqft: integer('sqft'),
+
+  // 'apartment' | 'house' | 'townhouse' | 'holiday-home' | 'plot' | 'other'
+  propertyType: text('property_type'),
+  yearBuilt: integer('year_built'),
+  /** Plot/land area in m². Distinct from sqft, which is interior living area. */
+  lotSize: integer('lot_size'),
+  /**
+   * Monthly fee in SEK ("avgift"). Essential for Swedish apartments — a low
+   * asking price with a high monthly fee is a materially different deal, and
+   * buyers here compare on it directly.
+   */
+  monthlyFee: integer('monthly_fee'),
+
   rawDescription: text('raw_description').notNull(),
 
   // AI-generated, agent-editable

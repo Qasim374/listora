@@ -19,10 +19,20 @@ async function main() {
 
   const email = process.env.DEV_AGENT_EMAIL ?? 'dev@listora.se'
 
+  // Placeholder contact number so the public page has something to show.
+  const phone = process.env.DEV_AGENT_PHONE ?? '+46 70 123 45 67'
+
   const existing = await db.query.users.findFirst({ where: eq(users.email, email) })
 
   if (existing) {
-    console.log('\nDev agent already exists.')
+    // Backfill contact details added to the schema after this row was created
+    if (!existing.phone) {
+      await db.update(users).set({ phone }).where(eq(users.id, existing.id))
+      console.log(`\nDev agent already exists — added missing phone ${phone}.`)
+    } else {
+      console.log('\nDev agent already exists.')
+    }
+
     console.log(`  DEV_AGENT_ID=${existing.id}\n`)
     return
   }
@@ -32,6 +42,7 @@ async function main() {
     .values({
       name: process.env.DEV_AGENT_NAME ?? 'Dev Agent',
       email,
+      phone,
       subscriptionTier: 'pro', // generous quota while developing
     })
     .returning()

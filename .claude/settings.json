@@ -24,7 +24,16 @@
       "PowerShell(npm run check:plausibility)",
       "PowerShell(try { $r = Invoke-WebRequest 'http://localhost:3000/dashboard/listings/new' -UseBasicParsing -TimeoutSec 90; \"form page HTTP $\\($r.StatusCode\\)  \\($\\($r.Content.Length\\) bytes\\)\" } catch { \"FAILED $\\($_.Exception.Message\\)\" })",
       "PowerShell(npx tsx scripts/tmp-length-test.ts)",
-      "PowerShell(npm run check:e2e 2>&1)"
+      "PowerShell(npm run check:e2e 2>&1)",
+      "PowerShell(npx tsx -e \"import{config}from'dotenv';config\\({path:'.env.local'}\\);\\(async\\(\\)=>{const{neon}=await import\\('@neondatabase/serverless'\\);const sql=neon\\(process.env.DATABASE_URL\\);const v=await sql'select version\\(\\)';console.log\\('PG:',v[0].version.split\\(','\\)[0]\\);const c=await sql\\\\\"select conname,contype from pg_constraint where conrelid='listings'::regclass order by conname\\\\\";console.log\\('constraints on listings:'\\);c.forEach\\(x=>console.log\\('  ',x.contype,x.conname\\)\\)}\\)\\(\\)\" 2>&1)",
+      "PowerShell(npx tsx scripts/tmp-inspect.ts)",
+      "PowerShell(npm install -D drizzle-kit@latest drizzle-orm@latest --no-audit --no-fund 2>&1)",
+      "PowerShell(node -e \"const p=require\\('./package.json'\\);console.log\\('drizzle-kit:',p.devDependencies['drizzle-kit']\\);console.log\\('drizzle-orm:',p.dependencies['drizzle-orm']\\)\")",
+      "PowerShell(\"\")",
+      "PowerShell(npm install --no-audit --no-fund 2>&1)",
+      "PowerShell(if \\($?\\) { \"typecheck ok \\(drizzle-orm 0.45 compatible\\)\" } else { \"TYPECHECK FAILED\" })",
+      "PowerShell(if \\($?\\) { \"typecheck ok\" } else { \"TYPECHECK FAILED\" })",
+      "PowerShell(npx tsx scripts/tmp-view-check.ts)"
     ]
   }
 }

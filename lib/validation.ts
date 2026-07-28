@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { MAX_IMAGES_PER_LISTING } from './blob'
+import { PROPERTY_TYPE_VALUES } from './property-types'
 
 /**
  * Empty form fields arrive as '' and must become null, not 0 — "price not
@@ -59,6 +60,28 @@ export const listingFormSchema = z.object({
   sqft: nullableNumber(
     'Living area',
     z.number().int('Living area must be a whole number').min(0).max(100_000),
+  ),
+
+  propertyType: z.preprocess(
+    (value) => (value === '' || value === undefined ? null : value),
+    z.enum(PROPERTY_TYPE_VALUES as [string, ...string[]]).nullable(),
+  ),
+  yearBuilt: nullableNumber(
+    'Year built',
+    z
+      .number()
+      .int('Year built must be a whole number')
+      .min(1200, 'Year built looks too early')
+      // Buildings are sold before completion, so allow a little into the future
+      .max(new Date().getFullYear() + 5, 'Year built is too far in the future'),
+  ),
+  lotSize: nullableNumber(
+    'Plot size',
+    z.number().int('Plot size must be a whole number').min(0).max(10_000_000),
+  ),
+  monthlyFee: nullableNumber(
+    'Monthly fee',
+    z.number().int('Monthly fee must be a whole number').min(0).max(500_000),
   ),
 
   images: z
