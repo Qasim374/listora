@@ -4,11 +4,7 @@ import { upload } from '@vercel/blob/client'
 import { useRef, useState, useTransition } from 'react'
 
 import { createListing } from '@/app/(dashboard)/dashboard/listings/new/actions'
-import {
-  ACCEPTED_IMAGE_TYPES,
-  MAX_IMAGES_PER_LISTING,
-  MAX_IMAGE_BYTES,
-} from '@/lib/blob'
+import { ACCEPTED_IMAGE_TYPES, MAX_IMAGES_PER_LISTING, MAX_IMAGE_BYTES } from '@/lib/blob'
 import { checkPlausibility } from '@/lib/plausibility'
 import { PROPERTY_TYPES } from '@/lib/property-types'
 import { cn } from '@/lib/utils'
@@ -236,8 +232,8 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
             <p className="text-sm font-medium text-ink">Photo uploads aren&apos;t configured yet</p>
             <p className="mt-1.5 text-sm text-ink-soft">
               Create a Blob store in your Vercel project (Storage → Blob) and put its token in{' '}
-              <code className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</code>. You can still
-              create listings without photos in the meantime.
+              <code className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</code>. You can still create
+              listings without photos in the meantime.
             </p>
           </div>
         )}
@@ -470,7 +466,10 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
       </section>
 
       {formError ? (
-        <p role="alert" className="rounded-lg border border-accent bg-accent-soft/20 px-4 py-3 text-sm text-ink">
+        <p
+          role="alert"
+          className="rounded-lg border border-accent bg-accent-soft/20 px-4 py-3 text-sm text-ink"
+        >
           {formError}
         </p>
       ) : null}

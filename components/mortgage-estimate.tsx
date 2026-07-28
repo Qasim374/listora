@@ -49,11 +49,12 @@ export function MortgageEstimate({
   const afterDeduction = monthlyInterest * 0.7 + monthlyAmortisation + fee
 
   return (
-    <section className="mt-10">
-      <h2 className="font-display text-xl text-brand-900">Estimated monthly cost</h2>
+    <section>
+      <h2 className="font-display text-lg text-brand-900">Estimated monthly cost</h2>
 
-      <div className="card mt-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <div className="card mt-3">
+        {/* Single column: this lives in a narrow sidebar, not full width */}
+        <div className="grid gap-4">
           <div>
             <label htmlFor="downPercent" className="label">
               Down payment: {downPercent}% ({formatPrice(downPayment)})
@@ -111,9 +112,9 @@ export function MortgageEstimate({
         </p>
 
         <p className="mt-4 text-xs leading-relaxed text-ink-muted">
-          An estimate only, using the Swedish amortisation requirement and a 30% interest
-          deduction. It does not include income-based limits, insurance, or maintenance. Not a
-          loan offer — confirm figures with your bank.
+          An estimate only, using the Swedish amortisation requirement and a 30% interest deduction.
+          It does not include income-based limits, insurance, or maintenance. Not a loan offer —
+          confirm figures with your bank.
         </p>
       </div>
     </section>

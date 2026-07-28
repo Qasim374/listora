@@ -52,7 +52,10 @@ export const listingFormSchema = z.object({
     'Price',
     z.number().int('Price must be a whole number').min(0).max(2_000_000_000),
   ),
-  beds: nullableNumber('Bedrooms', z.number().int('Bedrooms must be a whole number').min(0).max(50)),
+  beds: nullableNumber(
+    'Bedrooms',
+    z.number().int('Bedrooms must be a whole number').min(0).max(50),
+  ),
   baths: nullableNumber(
     'Bathrooms',
     z.number().min(0).max(50).multipleOf(0.5, 'Bathrooms must be in steps of 0.5'),

@@ -33,7 +33,10 @@
       "PowerShell(npm install --no-audit --no-fund 2>&1)",
       "PowerShell(if \\($?\\) { \"typecheck ok \\(drizzle-orm 0.45 compatible\\)\" } else { \"TYPECHECK FAILED\" })",
       "PowerShell(if \\($?\\) { \"typecheck ok\" } else { \"TYPECHECK FAILED\" })",
-      "PowerShell(npx tsx scripts/tmp-view-check.ts)"
+      "PowerShell(npx tsx scripts/tmp-view-check.ts)",
+      "PowerShell(npx prettier --version 2>$null)",
+      "PowerShell(if \\(-not $?\\) { \"prettier not installed - will fix indentation manually\" })",
+      "PowerShell(\"=== diff stats \\(should be whitespace/formatting only\\) ===\")"
     ]
   }
 }

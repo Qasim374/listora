@@ -52,7 +52,10 @@ export function ListingCopyEditor(props: Props) {
     return () => clearTimeout(timer)
   }, [notice])
 
-  function run(kind: 'generate' | 'save' | 'publish', task: () => Promise<{ ok: boolean; error?: string }>) {
+  function run(
+    kind: 'generate' | 'save' | 'publish',
+    task: () => Promise<{ ok: boolean; error?: string }>,
+  ) {
     setBusy(kind)
     setError(null)
     setNotice(null)
@@ -217,11 +220,7 @@ export function ListingCopyEditor(props: Props) {
               disabled={busy !== null}
               className={published ? 'btn-secondary' : 'btn-primary'}
             >
-              {busy === 'publish'
-                ? 'Working…'
-                : published
-                  ? 'Take offline'
-                  : 'Publish listing'}
+              {busy === 'publish' ? 'Working…' : published ? 'Take offline' : 'Publish listing'}
             </button>
 
             <p className="text-sm text-ink-muted">
@@ -269,7 +268,11 @@ export function ListingCopyEditor(props: Props) {
       ) : null}
 
       {notice ? (
-        <p className={cn('rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800')}>
+        <p
+          className={cn(
+            'rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800',
+          )}
+        >
           {notice}
         </p>
       ) : null}

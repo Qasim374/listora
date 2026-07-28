@@ -24,9 +24,9 @@ export default function MarketingHomePage() {
         </h1>
 
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-          Drop in your photos and a few rough notes about the property. Listora writes the
-          headline, the description and the highlights, then gives you a link to send to
-          buyers. Edit anything before you publish.
+          Drop in your photos and a few rough notes about the property. Listora writes the headline,
+          the description and the highlights, then gives you a link to send to buyers. Edit anything
+          before you publish.
         </p>
 
         <div className="mt-10 flex flex-wrap gap-3">

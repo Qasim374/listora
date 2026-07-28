@@ -46,8 +46,8 @@ export default async function NewListingPage() {
 
       <h1 className="mt-4 font-display text-3xl text-brand-900">New listing</h1>
       <p className="mt-2 text-sm text-ink-soft">
-        Add the facts and your rough notes. Polished copy comes next — you&apos;ll be able to
-        edit it before anything goes live.
+        Add the facts and your rough notes. Polished copy comes next — you&apos;ll be able to edit
+        it before anything goes live.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
         {quota.remaining} of {quota.limit} listings remaining this period.

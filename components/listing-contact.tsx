@@ -60,9 +60,7 @@ export function ListingContact({ slug }: { slug: string }) {
   return (
     <div>
       <h2 className="font-display text-xl text-brand-900">Interested in a viewing?</h2>
-      <p className="mt-2 text-sm text-ink-soft">
-        Get in touch with the agent to arrange a time.
-      </p>
+      <p className="mt-2 text-sm text-ink-soft">Get in touch with the agent to arrange a time.</p>
 
       <button type="button" onClick={reveal} disabled={loading} className="btn-primary mt-5">
         {loading ? 'Loading…' : 'Show contact details'}

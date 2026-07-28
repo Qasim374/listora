@@ -55,9 +55,7 @@ export default async function DashboardPage() {
             New listing
           </Link>
         ) : (
-          <span className="text-sm text-ink-muted">
-            Listing limit reached for this period
-          </span>
+          <span className="text-sm text-ink-muted">Listing limit reached for this period</span>
         )}
       </div>
 
@@ -99,11 +97,7 @@ export default async function DashboardPage() {
                 </Link>
                 {/* Drafts have no public page yet — linking there would 404 */}
                 {listing.status === 'published' ? (
-                  <Link
-                    href={`/listing/${listing.slug}`}
-                    className="btn-secondary"
-                    target="_blank"
-                  >
+                  <Link href={`/listing/${listing.slug}`} className="btn-secondary" target="_blank">
                     View page
                   </Link>
                 ) : null}

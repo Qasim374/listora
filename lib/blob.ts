@@ -1,9 +1,4 @@
-export const ACCEPTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/avif',
-] as const
+export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'] as const
 
 /** Phone photos are routinely 8-12 MB, so leave real headroom. */
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024

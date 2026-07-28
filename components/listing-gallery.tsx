@@ -94,7 +94,10 @@ export function ListingGallery({ images, alt }: { images: GalleryImage[]; alt: s
       <div className="relative bg-ink">
         <div
           ref={trackRef}
-          className={cn('no-scrollbar flex w-full overflow-x-auto', !single && 'snap-x snap-mandatory')}
+          className={cn(
+            'no-scrollbar flex w-full overflow-x-auto',
+            !single && 'snap-x snap-mandatory',
+          )}
         >
           {images.map((image, position) => (
             <button

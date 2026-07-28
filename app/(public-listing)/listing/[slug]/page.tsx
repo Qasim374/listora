@@ -122,170 +122,185 @@ export default async function PublicListingPage({ params }: PageProps) {
         alt={listing.aiHeadline ?? listing.address}
       />
 
-      <article className="mx-auto max-w-3xl px-6">
-        {/* relative+z-10 so the card paints cleanly over the photo it overlaps,
-            and the smaller offset keeps the address clear of the image edge. */}
-        <div className="relative z-10 -mt-6 rounded-xl border border-sand-200 bg-sand-50 p-6 shadow-sm sm:p-8">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-brand-700">
-              For sale
-            </span>
-            {typeLabel ? (
-              <span className="rounded-full bg-sand-200 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
-                {typeLabel}
-              </span>
-            ) : null}
-            <span className="text-xs text-ink-muted">
-              {daysListed === 0 ? 'Listed today' : `Listed ${daysListed} days ago`}
-            </span>
-          </div>
-
-          <p className="mt-3 text-sm text-ink-muted">{listing.address}</p>
-
-          <h1 className="mt-2 font-display text-3xl leading-tight text-brand-900 sm:text-4xl">
-            {listing.aiHeadline ?? listing.address}
-          </h1>
-
-          <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <p className="text-3xl font-medium text-brand-700">{formatPrice(listing.price)}</p>
-            {listing.monthlyFee !== null ? (
-              <p className="text-sm text-ink-muted">
-                + {formatPrice(listing.monthlyFee)} / month fee
-              </p>
-            ) : null}
-            {pricePerSqm !== null ? (
-              <p className="text-sm text-ink-muted">{formatPrice(pricePerSqm)} / m²</p>
-            ) : null}
-          </div>
-
-          {/* Hidden entirely when the agent supplied none of these — a row of
-              three em-dashes reads as a broken page, not as "not specified". */}
-          {hasSpecs ? (
-            <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-sand-200 pt-6 text-sm">
-              {listing.beds !== null ? (
-                <div>
-                  <dt className="text-ink-muted">Bedrooms</dt>
-                  <dd className="mt-0.5 font-medium text-ink">{listing.beds}</dd>
-                </div>
-              ) : null}
-              {listing.baths !== null ? (
-                <div>
-                  <dt className="text-ink-muted">Bathrooms</dt>
-                  <dd className="mt-0.5 font-medium text-ink">{listing.baths}</dd>
-                </div>
-              ) : null}
-              {listing.sqft !== null ? (
-                <div>
-                  <dt className="text-ink-muted">Living area</dt>
-                  <dd className="mt-0.5 font-medium text-ink">{formatSqft(listing.sqft)}</dd>
-                </div>
-              ) : null}
-            </dl>
-          ) : null}
-        </div>
-
-        {highlights.length > 0 ? (
-          <section className="mt-10">
-            <h2 className="font-display text-xl text-brand-900">Highlights</h2>
-            <ul className="mt-4 space-y-2.5">
-              {highlights.map((highlight) => (
-                <li key={highlight} className="flex gap-3 text-ink-soft">
-                  <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                  <span>{highlight}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {listing.aiDescription ? (
-          <section className="mt-10">
-            <h2 className="font-display text-xl text-brand-900">About this property</h2>
-            <div className="mt-4 space-y-4 leading-relaxed text-ink-soft">
-              {listing.aiDescription.split(/\n\s*\n/).map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="mt-10">
-          <h2 className="font-display text-xl text-brand-900">Property details</h2>
-          <dl className="mt-4 overflow-hidden rounded-xl border border-sand-200 bg-sand-50">
-            {details.map((row, index) => (
-              <div
-                key={row.label}
-                className={
-                  index % 2 === 0
-                    ? 'flex justify-between gap-4 px-5 py-3 text-sm'
-                    : 'flex justify-between gap-4 bg-sand-100/70 px-5 py-3 text-sm'
-                }
-              >
-                <dt className="text-ink-muted">{row.label}</dt>
-                <dd className="text-right font-medium text-ink">{row.value}</dd>
+      {/**
+       * Two columns from lg up: the property narrative on the left, the buyer's
+       * decision tools (agent, monthly cost, map) on the right.
+       *
+       * The header card no longer pulls itself up over the gallery. That overlap
+       * worked while the photo was directly above, but the thumbnail strip now
+       * sits between them and the card was clipping it.
+       */}
+      <div className="mx-auto max-w-content px-6 pt-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <article className="min-w-0">
+            <div className="rounded-xl border border-sand-200 bg-sand-50 p-6 shadow-sm sm:p-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-brand-700">
+                  For sale
+                </span>
+                {typeLabel ? (
+                  <span className="rounded-full bg-sand-200 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                    {typeLabel}
+                  </span>
+                ) : null}
+                <span className="text-xs text-ink-muted">
+                  {daysListed === 0 ? 'Listed today' : `Listed ${daysListed} days ago`}
+                </span>
               </div>
-            ))}
-          </dl>
-        </section>
 
-        {features.length > 0 ? (
-          <section className="mt-10">
-            <h2 className="font-display text-xl text-brand-900">Features</h2>
-            <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-              {features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2.5 text-sm text-ink-soft">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden
-                    className="mt-0.5 h-4 w-4 shrink-0 text-brand-500"
+              <p className="mt-3 text-sm text-ink-muted">{listing.address}</p>
+
+              <h1 className="mt-2 font-display text-3xl leading-tight text-brand-900 sm:text-4xl">
+                {listing.aiHeadline ?? listing.address}
+              </h1>
+
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <p className="text-3xl font-medium text-brand-700">{formatPrice(listing.price)}</p>
+                {listing.monthlyFee !== null ? (
+                  <p className="text-sm text-ink-muted">
+                    + {formatPrice(listing.monthlyFee)} / month fee
+                  </p>
+                ) : null}
+                {pricePerSqm !== null ? (
+                  <p className="text-sm text-ink-muted">{formatPrice(pricePerSqm)} / m²</p>
+                ) : null}
+              </div>
+
+              {/* Hidden entirely when the agent supplied none of these — a row of
+              three em-dashes reads as a broken page, not as "not specified". */}
+              {hasSpecs ? (
+                <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-sand-200 pt-6 text-sm">
+                  {listing.beds !== null ? (
+                    <div>
+                      <dt className="text-ink-muted">Bedrooms</dt>
+                      <dd className="mt-0.5 font-medium text-ink">{listing.beds}</dd>
+                    </div>
+                  ) : null}
+                  {listing.baths !== null ? (
+                    <div>
+                      <dt className="text-ink-muted">Bathrooms</dt>
+                      <dd className="mt-0.5 font-medium text-ink">{listing.baths}</dd>
+                    </div>
+                  ) : null}
+                  {listing.sqft !== null ? (
+                    <div>
+                      <dt className="text-ink-muted">Living area</dt>
+                      <dd className="mt-0.5 font-medium text-ink">{formatSqft(listing.sqft)}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              ) : null}
+            </div>
+
+            {highlights.length > 0 ? (
+              <section className="mt-10">
+                <h2 className="font-display text-xl text-brand-900">Highlights</h2>
+                <ul className="mt-4 space-y-2.5">
+                  {highlights.map((highlight) => (
+                    <li key={highlight} className="flex gap-3 text-ink-soft">
+                      <span
+                        aria-hidden
+                        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                      />
+                      <span>{highlight}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {listing.aiDescription ? (
+              <section className="mt-10">
+                <h2 className="font-display text-xl text-brand-900">About this property</h2>
+                <div className="mt-4 space-y-4 leading-relaxed text-ink-soft">
+                  {listing.aiDescription.split(/\n\s*\n/).map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="mt-10">
+              <h2 className="font-display text-xl text-brand-900">Property details</h2>
+              <dl className="mt-4 overflow-hidden rounded-xl border border-sand-200 bg-sand-50">
+                {details.map((row, index) => (
+                  <div
+                    key={row.label}
+                    className={
+                      index % 2 === 0
+                        ? 'flex justify-between gap-4 px-5 py-3 text-sm'
+                        : 'flex justify-between gap-4 bg-sand-100/70 px-5 py-3 text-sm'
+                    }
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+                    <dt className="text-ink-muted">{row.label}</dt>
+                    <dd className="text-right font-medium text-ink">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
 
-        {listing.price !== null && listing.price > 0 ? (
-          <MortgageEstimate price={listing.price} monthlyFee={listing.monthlyFee} />
-        ) : null}
+            {features.length > 0 ? (
+              <section className="mt-10">
+                <h2 className="font-display text-xl text-brand-900">Features</h2>
+                <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5 text-sm text-ink-soft">
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden
+                        className="mt-0.5 h-4 w-4 shrink-0 text-brand-500"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
-        <section className="mt-10">
-          <h2 className="font-display text-xl text-brand-900">Location</h2>
-          <div className="mt-4 overflow-hidden rounded-xl border border-sand-200">
-            {/* Keyless Google Maps embed. No geocoding step and no API key to
-                manage; the address string is all it needs. */}
-            <iframe
-              title={`Map of ${listing.address}`}
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.address)}&output=embed`}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              className="h-72 w-full border-0"
-            />
-          </div>
-          <p className="mt-2 text-xs text-ink-muted">
-            Map position is approximate, based on the address supplied by the agent.
-          </p>
-        </section>
+            <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-sand-200 pt-6">
+              <p className="text-xs text-ink-muted">
+                Listing prepared with Listora. Information supplied by the selling agent.
+              </p>
+              <ListingShare url={publicUrl} title={listing.aiHeadline ?? listing.address} />
+            </div>
+          </article>
 
-        <section className="card mt-12 text-center" id="contact">
-          <ListingContact slug={listing.slug} />
-        </section>
+          <aside className="space-y-6 lg:self-start">
+            <section className="card text-center" id="contact">
+              <ListingContact slug={listing.slug} />
+            </section>
 
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-sand-200 pt-6">
-          <p className="text-xs text-ink-muted">
-            Listing prepared with Listora. Information supplied by the selling agent.
-          </p>
-          <ListingShare url={publicUrl} title={listing.aiHeadline ?? listing.address} />
+            {listing.price !== null && listing.price > 0 ? (
+              <MortgageEstimate price={listing.price} monthlyFee={listing.monthlyFee} />
+            ) : null}
+
+            <section>
+              <h2 className="font-display text-lg text-brand-900">Location</h2>
+              <div className="mt-3 overflow-hidden rounded-xl border border-sand-200">
+                {/* Keyless Google Maps embed. No geocoding step and no API key to
+                    manage; the address string is all it needs. */}
+                <iframe
+                  title={`Map of ${listing.address}`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.address)}&output=embed`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="h-64 w-full border-0"
+                />
+              </div>
+              <p className="mt-2 text-xs text-ink-muted">
+                Map position is approximate, based on the address supplied by the agent.
+              </p>
+            </section>
+          </aside>
         </div>
-      </article>
+      </div>
 
       {/* Sticky price + contact bar on phones, so the CTA is always one tap away */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-sand-200 bg-sand-50/95 px-4 py-3 backdrop-blur sm:hidden print:hidden">
