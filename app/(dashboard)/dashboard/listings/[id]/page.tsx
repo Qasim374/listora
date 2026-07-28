@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { DeleteListingButton } from '@/components/delete-listing-button'
 import { ListingCopyEditor } from '@/components/listing-copy-editor'
 import { getCurrentAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
@@ -55,11 +56,16 @@ export default async function ListingDraftPage({ params }: PageProps) {
           </p>
         </div>
 
-        {listing.status === 'published' ? (
-          <Link href={`/listing/${listing.slug}`} target="_blank" className="btn-secondary">
-            View public page
+        <div className="flex flex-wrap gap-2">
+          {listing.status === 'published' ? (
+            <Link href={`/listing/${listing.slug}`} target="_blank" className="btn-secondary">
+              View public page
+            </Link>
+          ) : null}
+          <Link href={`/dashboard/listings/${listing.id}/edit`} className="btn-secondary">
+            Edit details
           </Link>
-        ) : null}
+        </div>
       </div>
 
       <dl className="card mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -128,6 +134,16 @@ export default async function ListingDraftPage({ params }: PageProps) {
             highlights={listing.aiHighlights ?? []}
             publicUrl={`${appUrl}/listing/${listing.slug}`}
           />
+        </div>
+      </section>
+
+      <section className="mt-12 border-t border-sand-200 pt-6">
+        <h2 className="font-display text-lg text-brand-900">Danger zone</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Deleting removes the listing, its photos and its public link for good.
+        </p>
+        <div className="mt-4">
+          <DeleteListingButton listingId={listing.id} address={listing.address} />
         </div>
       </section>
     </div>

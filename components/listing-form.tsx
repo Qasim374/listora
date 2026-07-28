@@ -3,6 +3,7 @@
 import { upload } from '@vercel/blob/client'
 import { useRef, useState, useTransition } from 'react'
 
+import { updateListing } from '@/app/(dashboard)/dashboard/listings/[id]/actions'
 import { createListing } from '@/app/(dashboard)/dashboard/listings/new/actions'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGES_PER_LISTING, MAX_IMAGE_BYTES } from '@/lib/blob'
 import { checkPlausibility } from '@/lib/plausibility'
@@ -36,12 +37,67 @@ type UploadedImage = {
   error?: string
 }
 
-export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
-  const [images, setImages] = useState<UploadedImage[]>([])
-  const [facts, setFacts] = useState(EMPTY_FACTS)
-  const [coverId, setCoverId] = useState<string | null>(null)
+/** Existing values when editing. Absent means "new listing". */
+export type ListingFormInitial = {
+  id: string
+  address: string
+  price: number | null
+  beds: number | null
+  baths: string | null
+  sqft: number | null
+  propertyType: string | null
+  yearBuilt: number | null
+  lotSize: number | null
+  monthlyFee: number | null
+  features: string[] | null
+  rawDescription: string
+  images: Array<{ id: string; url: string; isCover: boolean }>
+}
+
+const text = (value: number | string | null) => (value === null ? '' : String(value))
+
+export function ListingForm({
+  uploadsEnabled,
+  initial,
+}: {
+  uploadsEnabled: boolean
+  initial?: ListingFormInitial
+}) {
+  const editing = initial !== undefined
+
+  const [images, setImages] = useState<UploadedImage[]>(() =>
+    // Already-uploaded photos start in the 'done' state with previewUrl pointing
+    // at the real URL, so the rest of the component treats them identically.
+    (initial?.images ?? []).map((image) => ({
+      localId: image.id,
+      name: 'photo',
+      previewUrl: image.url,
+      url: image.url,
+      status: 'done' as const,
+    })),
+  )
+
+  const [facts, setFacts] = useState(() =>
+    initial
+      ? {
+          price: text(initial.price),
+          beds: text(initial.beds),
+          baths: text(initial.baths),
+          sqft: text(initial.sqft),
+          propertyType: initial.propertyType ?? '',
+          yearBuilt: text(initial.yearBuilt),
+          lotSize: text(initial.lotSize),
+          monthlyFee: text(initial.monthlyFee),
+        }
+      : EMPTY_FACTS,
+  )
+
+  const [coverId, setCoverId] = useState<string | null>(
+    initial?.images.find((image) => image.isCover)?.id ?? initial?.images[0]?.id ?? null,
+  )
   const [dragging, setDragging] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [pending, startTransition] = useTransition()
 
@@ -167,12 +223,18 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
     }
 
     startTransition(async () => {
-      // On success the action redirects, so nothing is returned.
-      const result = await createListing(payload)
+      // createListing redirects on success and so returns nothing; updateListing
+      // stays on the page and returns { ok: true }.
+      const result = initial
+        ? await updateListing(initial.id, payload)
+        : await createListing(payload)
 
       if (result && !result.ok) {
         setFormError(result.error)
         setFieldErrors(result.fieldErrors ?? {})
+      } else if (result?.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
       }
     })
   }
@@ -300,6 +362,7 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
               id="address"
               name="address"
               required
+              defaultValue={initial?.address ?? ''}
               placeholder="Storgatan 14, 114 55 Stockholm"
               className="input"
             />
@@ -438,6 +501,7 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
             id="features"
             name="features"
             rows={5}
+            defaultValue={(initial?.features ?? []).join('\n')}
             placeholder={'Balcony\nDishwasher\nFireplace\nLift in building\nStorage in basement'}
             className="input"
           />
@@ -457,6 +521,7 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
             name="rawDescription"
             required
             rows={7}
+            defaultValue={initial?.rawDescription ?? ''}
             placeholder={
               '3 rooms, top floor, corner apartment. Renovated kitchen 2021. Balcony faces south-west. Building from 1928, lift installed 2019. Close to Karlaplan metro.'
             }
@@ -474,13 +539,14 @@ export function ListingForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
         </p>
       ) : null}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={disabled} className="btn-primary">
-          {pending ? 'Saving…' : 'Save listing'}
+          {pending ? 'Saving…' : editing ? 'Save changes' : 'Save listing'}
         </button>
         {uploading ? (
           <span className="text-sm text-ink-muted">Waiting for photos to finish uploading…</span>
         ) : null}
+        {saved ? <span className="text-sm text-brand-600">Changes saved.</span> : null}
       </div>
     </form>
   )

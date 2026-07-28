@@ -26,7 +26,9 @@ export const PLANS: Record<PlanId, Plan> = {
     name: 'Free',
     price: 0,
     listingLimit: 3,
-    features: ['3 listings', 'AI-enhanced copy', 'Shareable listing pages'],
+    // The listing count is rendered from `listingLimit` on the pricing card, so
+    // repeating it here would print it twice.
+    features: ['AI-enhanced copy', 'Shareable listing pages', 'Photo galleries'],
     stripePriceId: null,
   },
   starter: {
@@ -35,10 +37,10 @@ export const PLANS: Record<PlanId, Plan> = {
     price: 299,
     listingLimit: 25,
     features: [
-      '25 listings per month',
       'AI-enhanced copy',
       'Shareable listing pages',
-      'View analytics',
+      'Photo galleries',
+      'View counts per listing',
     ],
     stripePriceId: process.env.STRIPE_PRICE_STARTER ?? null,
   },
@@ -48,10 +50,10 @@ export const PLANS: Record<PlanId, Plan> = {
     price: 799,
     listingLimit: 200,
     features: [
-      '200 listings per month',
       'AI-enhanced copy',
       'Shareable listing pages',
-      'View analytics',
+      'Photo galleries',
+      'View counts per listing',
       'Priority generation',
     ],
     stripePriceId: process.env.STRIPE_PRICE_PRO ?? null,

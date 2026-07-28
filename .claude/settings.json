@@ -36,7 +36,8 @@
       "PowerShell(npx tsx scripts/tmp-view-check.ts)",
       "PowerShell(npx prettier --version 2>$null)",
       "PowerShell(if \\(-not $?\\) { \"prettier not installed - will fix indentation manually\" })",
-      "PowerShell(\"=== diff stats \\(should be whitespace/formatting only\\) ===\")"
+      "PowerShell(\"=== diff stats \\(should be whitespace/formatting only\\) ===\")",
+      "PowerShell(npx tsx scripts/tmp-crud-check.ts)"
     ]
   }
 }

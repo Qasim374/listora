@@ -1,17 +1,19 @@
 'use server'
 
-import { and, eq } from 'drizzle-orm'
+import { del } from '@vercel/blob'
+import { and, eq, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { AiGenerationError, generateListingCopy } from '@/lib/ai'
 import { requireAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
-import { listings, type Listing } from '@/lib/db/schema'
-import { listingCopyEditSchema } from '@/lib/validation'
+import { listingImages, listings, type Listing } from '@/lib/db/schema'
+import { listingCopyEditSchema, listingFormSchema } from '@/lib/validation'
 
 export type ActionResult<T = undefined> =
   | ({ ok: true } & (T extends undefined ? { data?: never } : { data: T }))
-  | { ok: false; error: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> }
 
 /**
  * Every action re-loads the listing scoped by BOTH id and agentId. A listing id
@@ -152,6 +154,153 @@ export async function publishListing(listingId: string): Promise<ActionResult> {
 
   revalidate(listing)
   return { ok: true }
+}
+
+/**
+ * Removes blobs that are no longer referenced by any listing.
+ *
+ * Vercel Blob is billed by stored bytes, so an image dropped during an edit
+ * would otherwise be paid for forever with nothing linking to it. Checked
+ * against the whole table rather than just this listing, because the same URL
+ * could in principle be reused.
+ *
+ * Failures are logged, never thrown: a storage hiccup must not fail the edit the
+ * agent actually asked for.
+ */
+async function deleteOrphanedBlobs(urls: string[]) {
+  if (urls.length === 0) return
+
+  try {
+    const stillReferenced = await db
+      .select({ url: listingImages.url })
+      .from(listingImages)
+      .where(inArray(listingImages.url, urls))
+
+    const keep = new Set(stillReferenced.map((row) => row.url))
+    const orphans = urls.filter((url) => !keep.has(url))
+
+    if (orphans.length > 0) await del(orphans)
+  } catch (error) {
+    console.error('Failed to delete orphaned blobs', error)
+  }
+}
+
+/** Updates the property facts, notes and photos. Generated copy is untouched. */
+export async function updateListing(listingId: string, raw: unknown): Promise<ActionResult> {
+  let listing: Listing
+
+  try {
+    listing = await loadOwnedListing(listingId)
+  } catch {
+    return { ok: false, error: 'Listing not found.' }
+  }
+
+  const parsed = listingFormSchema.safeParse(raw)
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {}
+
+    for (const issue of parsed.error.issues) {
+      const key = issue.path.join('.')
+      if (key && !fieldErrors[key]) fieldErrors[key] = issue.message
+    }
+
+    return { ok: false, error: 'Please fix the highlighted fields.', fieldErrors }
+  }
+
+  const values = parsed.data
+
+  try {
+    const previousImages = await db
+      .select({ url: listingImages.url })
+      .from(listingImages)
+      .where(eq(listingImages.listingId, listing.id))
+
+    await db
+      .update(listings)
+      .set({
+        // The slug is deliberately NOT regenerated from a changed address:
+        // agents have already sent the old link to buyers, and changing it
+        // would break every one of those links.
+        address: values.address,
+        price: values.price,
+        beds: values.beds,
+        baths: values.baths === null ? null : String(values.baths),
+        sqft: values.sqft,
+        propertyType: values.propertyType,
+        yearBuilt: values.yearBuilt,
+        lotSize: values.lotSize,
+        monthlyFee: values.monthlyFee,
+        features: values.features,
+        rawDescription: values.rawDescription,
+        updatedAt: new Date(),
+      })
+      .where(eq(listings.id, listing.id))
+
+    // Replace the image set wholesale: the URL is the identity, so there is
+    // nothing to preserve in the old rows.
+    await db.delete(listingImages).where(eq(listingImages.listingId, listing.id))
+
+    if (values.images.length > 0) {
+      const coverIndex = Math.max(
+        0,
+        values.images.findIndex((image) => image.isCover),
+      )
+
+      await db.insert(listingImages).values(
+        values.images.map((image, index) => ({
+          listingId: listing.id,
+          url: image.url,
+          sortOrder: index,
+          isCover: index === coverIndex,
+        })),
+      )
+    }
+
+    const removed = previousImages
+      .map((row) => row.url)
+      .filter((url) => !values.images.some((image) => image.url === url))
+
+    await deleteOrphanedBlobs(removed)
+  } catch (error) {
+    console.error('Failed to update listing', error)
+    return { ok: false, error: 'Could not save the changes. Please try again.' }
+  }
+
+  revalidate(listing)
+  return { ok: true }
+}
+
+/** Permanently deletes the listing, its image rows, and its stored photos. */
+export async function deleteListing(listingId: string): Promise<ActionResult> {
+  let listing: Listing
+
+  try {
+    listing = await loadOwnedListing(listingId)
+  } catch {
+    return { ok: false, error: 'Listing not found.' }
+  }
+
+  try {
+    const images = await db
+      .select({ url: listingImages.url })
+      .from(listingImages)
+      .where(eq(listingImages.listingId, listing.id))
+
+    // listing_images rows cascade on delete
+    await db.delete(listings).where(eq(listings.id, listing.id))
+
+    await deleteOrphanedBlobs(images.map((row) => row.url))
+  } catch (error) {
+    console.error('Failed to delete listing', error)
+    return { ok: false, error: 'Could not delete the listing. Please try again.' }
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/listing/${listing.slug}`)
+
+  // Outside try/catch: redirect() signals by throwing.
+  redirect('/dashboard')
 }
 
 /** Takes the listing back offline. Existing links stop resolving. */

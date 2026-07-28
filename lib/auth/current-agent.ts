@@ -21,6 +21,21 @@ import { users, type User } from '@/lib/db/schema'
  */
 export async function getCurrentAgent(): Promise<User | null> {
   if (process.env.SKIP_AUTH === 'true') {
+    /**
+     * Refuse to run in production with auth disabled.
+     *
+     * Without this, deploying while SKIP_AUTH is still set would silently make
+     * every visitor on the internet the seeded dev agent — able to read, edit
+     * and delete that account's listings. Failing loudly at the first request is
+     * far safer than a quiet total authorisation bypass.
+     */
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SKIP_AUTH_IN_PROD !== 'true') {
+      throw new Error(
+        'SKIP_AUTH=true is not allowed in production: every visitor would share one account. ' +
+          'Set SKIP_AUTH=false and configure real authentication.',
+      )
+    }
+
     const devAgentId = process.env.DEV_AGENT_ID
 
     if (!devAgentId) {
