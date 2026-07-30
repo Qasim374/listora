@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { ListingForm } from '@/components/listing-form'
 import { getCurrentAgent } from '@/lib/auth/current-agent'
@@ -11,13 +12,7 @@ export const dynamic = 'force-dynamic'
 export default async function NewListingPage() {
   const agent = await getCurrentAgent()
 
-  if (!agent) {
-    return (
-      <div className="card">
-        <h1 className="font-display text-2xl text-brand-900">Not signed in</h1>
-      </div>
-    )
-  }
+  if (!agent) redirect('/login')
 
   const quota = await getQuotaStatus(agent)
 

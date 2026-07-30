@@ -4,41 +4,21 @@ import { db } from '@/lib/db'
 import { users, type User } from '@/lib/db/schema'
 import { envFlag } from '@/lib/env'
 
+import { getSessionAgentId } from './session'
+
 /**
  * The single place the app asks "who is the logged-in agent?".
  *
- * Right now auth is skipped: with SKIP_AUTH=true we resolve to the seeded dev
- * agent (see lib/db/seed.ts). Every page, query and server action goes through
- * this function rather than reading a session directly, so adding real auth
- * later is a change to THIS FILE ONLY — no schema migration, no query rewrites.
+ * Every page, query and server action goes through here rather than reading a
+ * cookie directly, which is what made swapping the dev stub for real sessions a
+ * change to this one file.
  *
- * When NextAuth goes in, the else-branch below becomes:
- *
- *   const session = await auth()
- *   if (!session?.user?.email) return null
- *   return db.query.users.findFirst({ where: eq(users.email, session.user.email) }) ?? null
- *
- * ...and SKIP_AUTH flips to false. That's the whole migration.
+ * SKIP_AUTH is honoured ONLY in development. In production the value is ignored
+ * entirely rather than throwing — a deployed app always uses real sessions, so
+ * there is no flag to get wrong and no escape hatch to leave switched on.
  */
 export async function getCurrentAgent(): Promise<User | null> {
-  if (envFlag(process.env.SKIP_AUTH)) {
-    /**
-     * Refuse to run in production with auth disabled.
-     *
-     * Without this, deploying while SKIP_AUTH is still set would silently make
-     * every visitor on the internet the seeded dev agent — able to read, edit
-     * and delete that account's listings. Failing loudly at the first request is
-     * far safer than a quiet total authorisation bypass.
-     */
-    if (process.env.NODE_ENV === 'production' && !envFlag(process.env.ALLOW_SKIP_AUTH_IN_PROD)) {
-      throw new Error(
-        'SKIP_AUTH=true is not allowed in production: every visitor would share one account. ' +
-          'Set SKIP_AUTH=false and configure real authentication, or set ' +
-          'ALLOW_SKIP_AUTH_IN_PROD=true for a password-protected demo. ' +
-          `(Seen: ALLOW_SKIP_AUTH_IN_PROD=${JSON.stringify(process.env.ALLOW_SKIP_AUTH_IN_PROD ?? null)})`,
-      )
-    }
-
+  if (process.env.NODE_ENV === 'development' && envFlag(process.env.SKIP_AUTH)) {
     const devAgentId = process.env.DEV_AGENT_ID
 
     if (!devAgentId) {
@@ -47,9 +27,7 @@ export async function getCurrentAgent(): Promise<User | null> {
       )
     }
 
-    const agent = await db.query.users.findFirst({
-      where: eq(users.id, devAgentId),
-    })
+    const agent = await db.query.users.findFirst({ where: eq(users.id, devAgentId) })
 
     if (!agent) {
       throw new Error(
@@ -60,8 +38,15 @@ export async function getCurrentAgent(): Promise<User | null> {
     return agent
   }
 
-  // Real auth not wired up yet — see step 3 of the build plan.
-  return null
+  const agentId = await getSessionAgentId()
+
+  if (!agentId) return null
+
+  const agent = await db.query.users.findFirst({ where: eq(users.id, agentId) })
+
+  // A valid token for a deleted account resolves to null rather than throwing,
+  // so the caller simply treats it as signed out.
+  return agent ?? null
 }
 
 /**

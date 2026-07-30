@@ -1,5 +1,6 @@
 import { desc, eq } from 'drizzle-orm'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { getCurrentAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
@@ -16,18 +17,8 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
   const agent = await getCurrentAgent()
 
-  if (!agent) {
-    return (
-      <div className="card">
-        <h1 className="font-display text-2xl text-brand-900">Not signed in</h1>
-        <p className="mt-2 text-sm text-ink-soft">
-          Set <code className="font-mono">SKIP_AUTH=true</code> and{' '}
-          <code className="font-mono">DEV_AGENT_ID</code> in <code>.env.local</code>, or wait for
-          the auth step.
-        </p>
-      </div>
-    )
-  }
+  // The layout already redirects when signed out; this keeps the type narrow.
+  if (!agent) redirect('/login')
 
   const [rows, quota] = await Promise.all([
     db

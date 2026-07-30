@@ -76,11 +76,28 @@ Don't apply that blindly against the live database.
 
 ## Architecture notes
 
-**Auth is currently skipped.** `SKIP_AUTH=true` makes `getCurrentAgent()` resolve to the
-seeded dev agent. Crucially, `listings.agent_id` exists and every query is scoped by it
-already — so adding NextAuth later means editing one function
-(`lib/auth/current-agent.ts`) plus a login page and middleware. No migration, no query
-rewrites.
+**Auth is email + password, with no auth library.** Node's built-in `scrypt` hashes
+passwords (`lib/auth/password.ts`) and an HMAC-signed cookie carries the session
+(`lib/auth/session.ts`). No `next-auth`, no `bcrypt`, no sessions table — a signed stateless
+token means no database lookup per request, which matters on serverless.
+
+`AUTH_SECRET` (32+ chars) is **required in every environment**. Changing it signs everyone
+out at once, which is the intended emergency lever.
+
+`getCurrentAgent()` remains the single place the app asks who is signed in. `SKIP_AUTH` still
+skips the login screen, but is now **ignored unless `NODE_ENV=development`** — a deployed app
+always uses real sessions, so there is no flag to get wrong in production.
+
+**Middleware is not the security boundary.** `middleware.ts` only checks that a session
+cookie *exists*, because the Edge runtime cannot load `node:crypto` to verify the signature.
+Real verification happens in `getCurrentAgent()`, and the dashboard layout redirects to
+`/login` when it returns null. A forged cookie therefore gets past middleware and then
+resolves to no agent. For the same reason `SESSION_COOKIE` lives in
+`lib/auth/constants.ts` — importing it from `session.ts` pulls `node:crypto` into the edge
+bundle and fails the build.
+
+Run `npm run check:auth` (hashing and token forgery) and `npm run check:tenants`
+(one agent cannot read or edit another's listings) after touching any of this.
 
 **AI provider is swappable.** The app only ever calls `generateListingCopy()` from
 `lib/ai`. Groq is implemented; `lib/ai/claude.ts` is a documented stub. Switching is

@@ -1,10 +1,23 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
+import { SignOutButton } from '@/components/sign-out-button'
 import { getCurrentAgent } from '@/lib/auth/current-agent'
 import { envFlag } from '@/lib/env'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const agent = await getCurrentAgent()
+
+  /**
+   * The real gate for the whole dashboard.
+   *
+   * Middleware only checks that a cookie exists — it can't verify the signature
+   * on the edge runtime. So an expired or forged cookie gets past middleware and
+   * lands here, where the session has actually been checked. Redirecting rather
+   * than rendering a "not signed in" panel matters because sessions expire after
+   * 30 days: the normal case is a real agent who simply needs to log in again.
+   */
+  if (!agent) redirect('/login')
 
   return (
     <div className="min-h-screen">
@@ -22,9 +35,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
 
           {agent ? (
-            <div className="text-right text-sm">
-              <div className="font-medium text-ink">{agent.name}</div>
-              <div className="text-ink-muted">{agent.email}</div>
+            <div className="flex items-center gap-4">
+              <div className="text-right text-sm">
+                <div className="font-medium text-ink">{agent.name}</div>
+                <div className="text-ink-muted">{agent.email}</div>
+              </div>
+              <SignOutButton />
             </div>
           ) : null}
         </div>

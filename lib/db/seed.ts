@@ -14,10 +14,13 @@ config({ path: '.env.local' })
 async function main() {
   // Imported lazily so dotenv has populated DATABASE_URL before lib/db loads.
   const { eq } = await import('drizzle-orm')
+  const { hashPassword } = await import('../auth/password')
   const { db } = await import('./index')
   const { users } = await import('./schema')
 
   const email = process.env.DEV_AGENT_EMAIL ?? 'dev@listora.se'
+  // Dev-only credential so you can exercise the real login flow locally.
+  const devPassword = process.env.DEV_AGENT_PASSWORD ?? 'listora-dev-password'
 
   // Placeholder contact number so the public page has something to show.
   const phone = process.env.DEV_AGENT_PHONE ?? '+46 70 123 45 67'
@@ -25,15 +28,21 @@ async function main() {
   const existing = await db.query.users.findFirst({ where: eq(users.email, email) })
 
   if (existing) {
-    // Backfill contact details added to the schema after this row was created
-    if (!existing.phone) {
-      await db.update(users).set({ phone }).where(eq(users.id, existing.id))
-      console.log(`\nDev agent already exists — added missing phone ${phone}.`)
+    // Backfill columns added to the schema after this row was created
+    const patch: { phone?: string; passwordHash?: string } = {}
+
+    if (!existing.phone) patch.phone = phone
+    if (!existing.passwordHash) patch.passwordHash = await hashPassword(devPassword)
+
+    if (Object.keys(patch).length > 0) {
+      await db.update(users).set(patch).where(eq(users.id, existing.id))
+      console.log(`\nDev agent already exists — backfilled: ${Object.keys(patch).join(', ')}.`)
     } else {
       console.log('\nDev agent already exists.')
     }
 
-    console.log(`  DEV_AGENT_ID=${existing.id}\n`)
+    console.log(`  DEV_AGENT_ID=${existing.id}`)
+    console.log(`  sign in with: ${email} / ${devPassword}\n`)
     return
   }
 
@@ -43,6 +52,7 @@ async function main() {
       name: process.env.DEV_AGENT_NAME ?? 'Dev Agent',
       email,
       phone,
+      passwordHash: await hashPassword(devPassword),
       subscriptionTier: 'pro', // generous quota while developing
     })
     .returning()

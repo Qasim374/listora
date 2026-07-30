@@ -27,6 +27,11 @@ export const users = pgTable('users', {
   // Shown to buyers on the public listing page. Nullable: an agent may prefer
   // to be contacted by email only.
   phone: text('phone'),
+  /**
+   * scrypt hash — see lib/auth/password.ts for the format.
+   * Nullable so the dev-seeded agent can exist before a password is set.
+   */
+  passwordHash: text('password_hash'),
   // Matches a key in lib/plans.ts — 'free' | 'starter' | 'pro'
   subscriptionTier: text('subscription_tier').notNull().default('free'),
   stripeCustomerId: text('stripe_customer_id').unique(),

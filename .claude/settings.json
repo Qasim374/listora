@@ -38,7 +38,15 @@
       "PowerShell(if \\(-not $?\\) { \"prettier not installed - will fix indentation manually\" })",
       "PowerShell(\"=== diff stats \\(should be whitespace/formatting only\\) ===\")",
       "PowerShell(npx tsx scripts/tmp-crud-check.ts)",
-      "PowerShell(npm run check:env)"
+      "PowerShell(npm run check:env)",
+      "PowerShell(npm run check:auth)",
+      "PowerShell(npx tsx scripts/tmp-redirect.ts)",
+      "PowerShell(npx tsx scripts/tmp-auth-e2e.ts)",
+      "PowerShell(Select-String -Path \"app\\\\\\(dashboard\\)\\\\dashboard\\\\page.tsx\",\"app\\\\\\(dashboard\\)\\\\dashboard\\\\listings\\\\new\\\\page.tsx\" -Pattern \"^import\" | ForEach-Object { \"$\\($_.Filename\\): $\\($_.Line\\)\" })",
+      "PowerShell(npx tsx scripts/tmp-auth-e2e.ts 2>&1)",
+      "PowerShell(if \\($?\\) { \"typecheck ok\" } else { \"TYPECHECK FAILED\"; exit 1 })",
+      "PowerShell(Move-Item scripts\\\\tmp-auth-e2e.ts scripts\\\\check-tenant-isolation.ts -Force)",
+      "PowerShell(\"renamed to scripts/check-tenant-isolation.ts\")"
     ]
   }
 }
