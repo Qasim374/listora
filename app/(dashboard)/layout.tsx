@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { getCurrentAgent } from '@/lib/auth/current-agent'
+import { envFlag } from '@/lib/env'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const agent = await getCurrentAgent()
@@ -29,7 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </header>
 
-      {process.env.SKIP_AUTH === 'true' ? (
+      {envFlag(process.env.SKIP_AUTH) ? (
         <div className="border-b border-accent-soft bg-accent-soft/25">
           <p className="mx-auto max-w-content px-6 py-2 text-xs text-ink-soft">
             Auth is disabled (<code className="font-mono">SKIP_AUTH=true</code>) — every request

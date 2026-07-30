@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { users, type User } from '@/lib/db/schema'
+import { envFlag } from '@/lib/env'
 
 /**
  * The single place the app asks "who is the logged-in agent?".
@@ -20,7 +21,7 @@ import { users, type User } from '@/lib/db/schema'
  * ...and SKIP_AUTH flips to false. That's the whole migration.
  */
 export async function getCurrentAgent(): Promise<User | null> {
-  if (process.env.SKIP_AUTH === 'true') {
+  if (envFlag(process.env.SKIP_AUTH)) {
     /**
      * Refuse to run in production with auth disabled.
      *
@@ -29,10 +30,12 @@ export async function getCurrentAgent(): Promise<User | null> {
      * and delete that account's listings. Failing loudly at the first request is
      * far safer than a quiet total authorisation bypass.
      */
-    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SKIP_AUTH_IN_PROD !== 'true') {
+    if (process.env.NODE_ENV === 'production' && !envFlag(process.env.ALLOW_SKIP_AUTH_IN_PROD)) {
       throw new Error(
         'SKIP_AUTH=true is not allowed in production: every visitor would share one account. ' +
-          'Set SKIP_AUTH=false and configure real authentication.',
+          'Set SKIP_AUTH=false and configure real authentication, or set ' +
+          'ALLOW_SKIP_AUTH_IN_PROD=true for a password-protected demo. ' +
+          `(Seen: ALLOW_SKIP_AUTH_IN_PROD=${JSON.stringify(process.env.ALLOW_SKIP_AUTH_IN_PROD ?? null)})`,
       )
     }
 
