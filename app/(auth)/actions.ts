@@ -151,7 +151,7 @@ export async function requestPasswordReset(raw: unknown): Promise<AuthResult | {
     const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     const link = `${base}/reset-password?token=${encodeURIComponent(token)}`
 
-    await sendEmail({
+    const delivery = await sendEmail({
       to: agent.email,
       subject: 'Reset your Listora password',
       text: `Hello ${agent.name},
@@ -164,6 +164,28 @@ If it wasn't you, ignore this email — your password has not changed and the li
 
 Listora`,
     })
+
+    /**
+     * If delivery failed, print the link to the server log.
+     *
+     * Otherwise the token exists but nobody can ever see it, and the agent is
+     * locked out with no recovery path — which is exactly what happens while
+     * Resend is on its sandbox sender and refuses every address but the account
+     * owner's.
+     *
+     * This is a deliberate tradeoff: anyone who can read production logs could
+     * use the link to take over that account. It is acceptable only because the
+     * alternative is a permanently locked-out user, and it fires ONLY on failure.
+     * Once a domain is verified in Resend, sends stop failing and this stops
+     * logging. Remove it if log access is ever wider than the team.
+     */
+    if (!delivery.ok) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[password-reset] Email to ${agent.email} FAILED (${delivery.error}). ` +
+          `Recovery link (expires in 1 hour): ${link}`,
+      )
+    }
   }
 
   return { ok: true }
