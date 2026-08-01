@@ -8,6 +8,7 @@ import { ListingGallery } from '@/components/listing-gallery'
 import { ListingLeadForm } from '@/components/listing-lead-form'
 import { ListingMap } from '@/components/map/listing-map'
 import { ListingShare } from '@/components/listing-share'
+import { SaveListingButton } from '@/components/save-listing-button'
 import { MortgageEstimate } from '@/components/mortgage-estimate'
 import { ViewTracker } from '@/components/view-tracker'
 import { db } from '@/lib/db'
@@ -365,7 +366,10 @@ export default async function PublicListingPage({ params }: PageProps) {
               <p className="text-xs text-ink-muted">
                 Listing prepared with Listora. Information supplied by the selling agent.
               </p>
-              <ListingShare url={publicUrl} title={listing.aiHeadline ?? listing.address} />
+              <div className="flex flex-wrap items-center gap-3">
+                <SaveListingButton slug={listing.slug} />
+                <ListingShare url={publicUrl} title={listing.aiHeadline ?? listing.address} />
+              </div>
             </div>
           </article>
 
