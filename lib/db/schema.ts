@@ -179,6 +179,28 @@ export const leads = pgTable('leads', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * Single-use password reset tokens.
+ *
+ * Only a SHA-256 hash of the token is stored, never the token itself. A leaked
+ * database dump therefore cannot be used to reset anyone's password — the same
+ * reason we don't store passwords in plain text.
+ */
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  /** SHA-256 of the token that was emailed, hex-encoded. */
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  /** Set the moment it is redeemed, so a link cannot be replayed. */
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
+
 export type Lead = typeof leads.$inferSelect
 export type NewLead = typeof leads.$inferInsert
 

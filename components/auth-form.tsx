@@ -94,7 +94,13 @@ export function AuthForm({ mode }: { mode: 'signin' | 'signup' }) {
           <FieldError message={fieldErrors.password} />
         ) : signingUp ? (
           <p className="mt-1.5 text-xs text-ink-muted">At least 10 characters.</p>
-        ) : null}
+        ) : (
+          <p className="mt-1.5 text-right">
+            <Link href="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700">
+              Forgot your password?
+            </Link>
+          </p>
+        )}
       </div>
 
       {error ? (

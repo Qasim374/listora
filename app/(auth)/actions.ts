@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
 import { hashPassword, verifyPassword } from '@/lib/auth/password'
+import { consumeResetToken, createResetToken } from '@/lib/auth/reset-tokens'
 import { clearSessionCookie, setSessionCookie } from '@/lib/auth/session'
+import { sendEmail } from '@/lib/email'
 import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 
@@ -125,4 +127,85 @@ export async function signIn(raw: unknown): Promise<AuthResult> {
 export async function signOut(): Promise<void> {
   await clearSessionCookie()
   redirect('/login')
+}
+
+/**
+ * Starts a password reset.
+ *
+ * Always reports success, even for an address that has no account. Saying "no
+ * such user" would turn this form into an account-enumeration oracle — anyone
+ * could discover which agents are registered. The cost is that a typo looks like
+ * it worked, which the confirmation copy accounts for.
+ */
+export async function requestPasswordReset(raw: unknown): Promise<AuthResult | { ok: true }> {
+  const parsed = z.object({ email: emailSchema }).safeParse(raw)
+
+  if (!parsed.success) {
+    return { ok: false, error: 'Enter a valid email address.', fieldErrors: { email: 'Invalid' } }
+  }
+
+  const agent = await db.query.users.findFirst({ where: eq(users.email, parsed.data.email) })
+
+  if (agent) {
+    const token = await createResetToken(agent.id)
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const link = `${base}/reset-password?token=${encodeURIComponent(token)}`
+
+    await sendEmail({
+      to: agent.email,
+      subject: 'Reset your Listora password',
+      text: `Hello ${agent.name},
+
+Someone asked to reset the password for your Listora account. If that was you, open the link below within the next hour:
+
+${link}
+
+If it wasn't you, ignore this email — your password has not changed and the link will expire on its own.
+
+Listora`,
+    })
+  }
+
+  return { ok: true }
+}
+
+/** Sets a new password from a valid reset token and signs the agent in. */
+export async function resetPassword(raw: unknown): Promise<AuthResult> {
+  const parsed = z
+    .object({
+      token: z.string().min(10, 'This reset link is incomplete'),
+      password: z.string().min(10, 'Use at least 10 characters').max(200),
+    })
+    .safeParse(raw)
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: 'Please fix the highlighted fields.',
+      fieldErrors: collectFieldErrors(parsed.error),
+    }
+  }
+
+  // Consume first: if two requests race, only one can claim the token.
+  const userId = await consumeResetToken(parsed.data.token)
+
+  if (!userId) {
+    return {
+      ok: false,
+      error: 'This reset link is no longer valid. Request a new one.',
+    }
+  }
+
+  try {
+    await db
+      .update(users)
+      .set({ passwordHash: await hashPassword(parsed.data.password) })
+      .where(eq(users.id, userId))
+  } catch (error) {
+    console.error('Password reset failed', error)
+    return { ok: false, error: 'Could not update your password. Please try again.' }
+  }
+
+  await setSessionCookie(userId)
+  redirect('/dashboard')
 }
