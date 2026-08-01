@@ -62,11 +62,14 @@ export default async function EditListingPage({ params }: PageProps) {
             lotSize: listing.lotSize,
             monthlyFee: listing.monthlyFee,
             features: listing.features,
+            saleStatus: listing.saleStatus,
+            videoUrl: listing.videoUrl,
             rawDescription: listing.rawDescription,
             images: images.map((image) => ({
               id: image.id,
               url: image.url,
               isCover: image.isCover,
+              isFloorPlan: image.isFloorPlan,
             })),
           }}
         />

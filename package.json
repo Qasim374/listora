@@ -18,7 +18,8 @@
     "check:plausibility": "tsx scripts/check-plausibility.ts",
     "check:env": "tsx scripts/check-env-flag.ts",
     "check:auth": "tsx scripts/check-auth.ts",
-    "check:tenants": "tsx scripts/check-tenant-isolation.ts"
+    "check:tenants": "tsx scripts/check-tenant-isolation.ts",
+    "check:content": "tsx scripts/check-listing-content.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

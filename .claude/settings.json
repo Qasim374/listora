@@ -46,7 +46,13 @@
       "PowerShell(npx tsx scripts/tmp-auth-e2e.ts 2>&1)",
       "PowerShell(if \\($?\\) { \"typecheck ok\" } else { \"TYPECHECK FAILED\"; exit 1 })",
       "PowerShell(Move-Item scripts\\\\tmp-auth-e2e.ts scripts\\\\check-tenant-isolation.ts -Force)",
-      "PowerShell(\"renamed to scripts/check-tenant-isolation.ts\")"
+      "PowerShell(\"renamed to scripts/check-tenant-isolation.ts\")",
+      "PowerShell(\"=== git status ===\")",
+      "PowerShell(\"=== last commit ===\")",
+      "PowerShell(npx tsx scripts/tmp-prod-check.ts)",
+      "PowerShell(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(npm run check:content)"
     ]
   }
 }

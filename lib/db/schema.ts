@@ -80,6 +80,9 @@ export const listings = pgTable('listings', {
   /** Agent-entered amenities: "Balcony", "Fireplace", "Dishwasher", ... */
   features: jsonb('features').$type<string[]>(),
 
+  /** YouTube or Vimeo link. Stored as given; converted to an embed at render. */
+  videoUrl: text('video_url'),
+
   rawDescription: text('raw_description').notNull(),
 
   // AI-generated, agent-editable
@@ -87,7 +90,18 @@ export const listings = pgTable('listings', {
   aiDescription: text('ai_description'),
   aiHighlights: jsonb('ai_highlights').$type<string[]>(),
 
-  status: text('status').notNull().default('draft'), // 'draft' | 'published'
+  /**
+   * PUBLICATION state: has the agent made the page live? 'draft' | 'published'.
+   *
+   * Deliberately separate from saleStatus below. The two are independent — a
+   * listing can be published and pending, or published and sold — and folding
+   * them into one column would mean marking something Sold silently took the
+   * page offline.
+   */
+  status: text('status').notNull().default('draft'),
+
+  /** SALE state, shown as the badge to buyers. See lib/sale-status.ts. */
+  saleStatus: text('sale_status').notNull().default('for-sale'),
   viewCount: integer('view_count').notNull().default(0),
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -114,6 +128,13 @@ export const listingImages = pgTable(
     url: text('url').notNull(),
     sortOrder: integer('sort_order').notNull().default(0),
     isCover: boolean('is_cover').notNull().default(false),
+    /**
+     * Floor plans are stored here rather than in their own table — same upload
+     * path, same blob cleanup. They're excluded from the photo carousel and
+     * shown in their own section, because a diagram between two room photos
+     * reads as a mistake.
+     */
+    isFloorPlan: boolean('is_floor_plan').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

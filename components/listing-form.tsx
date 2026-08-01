@@ -8,6 +8,7 @@ import { createListing } from '@/app/(dashboard)/dashboard/listings/new/actions'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGES_PER_LISTING, MAX_IMAGE_BYTES } from '@/lib/blob'
 import { checkPlausibility } from '@/lib/plausibility'
 import { PROPERTY_TYPES } from '@/lib/property-types'
+import { SALE_STATUSES } from '@/lib/sale-status'
 import { cn } from '@/lib/utils'
 
 const EMPTY_FACTS = {
@@ -34,6 +35,7 @@ type UploadedImage = {
   previewUrl: string
   url: string | null
   status: 'uploading' | 'done' | 'error'
+  isFloorPlan: boolean
   error?: string
 }
 
@@ -50,8 +52,10 @@ export type ListingFormInitial = {
   lotSize: number | null
   monthlyFee: number | null
   features: string[] | null
+  saleStatus: string
+  videoUrl: string | null
   rawDescription: string
-  images: Array<{ id: string; url: string; isCover: boolean }>
+  images: Array<{ id: string; url: string; isCover: boolean; isFloorPlan: boolean }>
 }
 
 const text = (value: number | string | null) => (value === null ? '' : String(value))
@@ -74,6 +78,7 @@ export function ListingForm({
       previewUrl: image.url,
       url: image.url,
       status: 'done' as const,
+      isFloorPlan: image.isFloorPlan,
     })),
   )
 
@@ -148,6 +153,7 @@ export function ListingForm({
       previewUrl: URL.createObjectURL(file),
       url: null,
       status: 'uploading',
+      isFloorPlan: false,
     }))
 
     setImages((current) => [...current, ...queued])
@@ -217,9 +223,17 @@ export function ListingForm({
       lotSize: String(data.get('lotSize') ?? ''),
       monthlyFee: String(data.get('monthlyFee') ?? ''),
       features: String(data.get('features') ?? ''),
+      saleStatus: String(data.get('saleStatus') ?? 'for-sale'),
+      videoUrl: String(data.get('videoUrl') ?? ''),
       images: images
         .filter((image) => image.status === 'done' && image.url)
-        .map((image) => ({ url: image.url as string, isCover: image.localId === coverId })),
+        .map((image) => ({
+          url: image.url as string,
+          // A floor plan is never the cover photo — the cover is what buyers
+          // see first in a shared link preview.
+          isCover: image.localId === coverId && !image.isFloorPlan,
+          isFloorPlan: image.isFloorPlan,
+        })),
     }
 
     startTransition(async () => {
@@ -276,6 +290,9 @@ export function ListingForm({
               JPEG, PNG, WebP or AVIF · up to {Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB each ·
               max {MAX_IMAGES_PER_LISTING} photos
             </p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Upload floor plans here too, then tick “Floor plan” on them.
+            </p>
 
             <input
               ref={fileInputRef}
@@ -316,8 +333,32 @@ export function ListingForm({
                   className="aspect-[4/3] w-full object-cover"
                 />
 
+                <div className="absolute inset-x-0 bottom-0 flex justify-center bg-ink/70 p-1">
+                  <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-sand-50">
+                    <input
+                      type="checkbox"
+                      checked={image.isFloorPlan}
+                      onChange={(event) =>
+                        setImages((current) =>
+                          current.map((item) =>
+                            item.localId === image.localId
+                              ? { ...item, isFloorPlan: event.target.checked }
+                              : item,
+                          ),
+                        )
+                      }
+                      className="h-3 w-3 accent-brand-500"
+                    />
+                    Floor plan
+                  </label>
+                </div>
+
                 <div className="absolute inset-x-0 top-0 flex items-start justify-between p-1.5">
-                  {image.localId === coverId ? (
+                  {image.isFloorPlan ? (
+                    <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-sand-50">
+                      Plan
+                    </span>
+                  ) : image.localId === coverId ? (
                     <span className="rounded bg-brand-700 px-1.5 py-0.5 text-[10px] font-medium text-sand-50">
                       Cover
                     </span>
@@ -491,6 +532,41 @@ export function ListingForm({
       </section>
 
       {/* ----------------------------------------------------------------- notes */}
+      <section>
+        <h2 className="font-display text-lg text-brand-900">Status &amp; video</h2>
+
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <Field name="saleStatus" label="Sale status" error={fieldErrors.saleStatus}>
+            <select
+              id="saleStatus"
+              name="saleStatus"
+              defaultValue={initial?.saleStatus ?? 'for-sale'}
+              className="input"
+            >
+              {SALE_STATUSES.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field name="videoUrl" label="Video tour (optional)" error={fieldErrors.videoUrl}>
+            <input
+              id="videoUrl"
+              name="videoUrl"
+              defaultValue={initial?.videoUrl ?? ''}
+              placeholder="https://youtube.com/watch?v=..."
+              className="input"
+            />
+          </Field>
+        </div>
+        <p className="mt-1.5 text-xs text-ink-muted">
+          Paste a YouTube or Vimeo link. Sale status controls the badge buyers see; it is separate
+          from whether the page is published.
+        </p>
+      </section>
+
       <section>
         <h2 className="font-display text-lg text-brand-900">Features</h2>
         <p className="mt-1 text-sm text-ink-soft">

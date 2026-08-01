@@ -9,6 +9,7 @@ import { AiGenerationError, generateListingCopy } from '@/lib/ai'
 import { requireAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
 import { listingImages, listings, type Listing } from '@/lib/db/schema'
+import { buildImageRows } from '@/lib/listing-images'
 import { listingCopyEditSchema, listingFormSchema } from '@/lib/validation'
 
 export type ActionResult<T = undefined> =
@@ -232,6 +233,8 @@ export async function updateListing(listingId: string, raw: unknown): Promise<Ac
         lotSize: values.lotSize,
         monthlyFee: values.monthlyFee,
         features: values.features,
+        videoUrl: values.videoUrl,
+        saleStatus: values.saleStatus,
         rawDescription: values.rawDescription,
         updatedAt: new Date(),
       })
@@ -242,19 +245,7 @@ export async function updateListing(listingId: string, raw: unknown): Promise<Ac
     await db.delete(listingImages).where(eq(listingImages.listingId, listing.id))
 
     if (values.images.length > 0) {
-      const coverIndex = Math.max(
-        0,
-        values.images.findIndex((image) => image.isCover),
-      )
-
-      await db.insert(listingImages).values(
-        values.images.map((image, index) => ({
-          listingId: listing.id,
-          url: image.url,
-          sortOrder: index,
-          isCover: index === coverIndex,
-        })),
-      )
+      await db.insert(listingImages).values(buildImageRows(listing.id, values.images))
     }
 
     const removed = previousImages

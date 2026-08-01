@@ -58,6 +58,8 @@ async function main() {
       propertyType: 'apartment',
       yearBuilt: 1928,
       monthlyFee: 3_450,
+      saleStatus: 'for-sale',
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       features: [
         'South-west facing balcony',
         'Renovated kitchen (2021)',
@@ -76,33 +78,55 @@ async function main() {
 The kitchen was rebuilt in 2021 and handles real cooking: full-height cabinetry, room for a proper table, and sightlines that keep you in the conversation. Ninety-eight square metres are laid out so the bedrooms sit away from the entrance, which makes the apartment quieter than its floor plan suggests.
 
 A lift was added in 2019, and Karlaplan metro is a short walk away. Practical details handled, so the apartment can be judged on how it feels to live in.`,
+      /**
+       * Highlights deliberately say something the feature list does not.
+       *
+       * The features section already lists "South-west facing balcony" and
+       * "Renovated kitchen (2021)" verbatim, so repeating those here would be
+       * filtered out by splitHighlightsAndFeatures — and would waste the most
+       * prominent space on the page. Each line below adds meaning: what the
+       * fact means for someone living there.
+       */
       aiHighlights: [
-        'Top-floor corner position with dual-aspect light',
-        'Kitchen fully rebuilt in 2021',
-        'South-west facing balcony',
-        'Lift installed 2019 in a 1928 building',
-        'Walking distance to Karlaplan metro',
+        'Afternoon and evening sun on the balcony, right through dinner',
+        'Nothing to spend on the kitchen for years',
+        'Lift plus top floor: no stairs, and no footsteps overhead',
+        'Under five minutes on foot to the metro',
       ],
       status: 'published',
     })
     .returning()
 
+  /**
+   * Real photographs, not labelled colour blocks.
+   *
+   * The previous version used placehold.co URLs with `?text=Living+room`, which
+   * rendered the words "Living room" across the image — and read as a bug where
+   * room labels were leaking over the photos. Picsum returns actual photos, and
+   * the `seed` keeps each one stable between reseeds.
+   */
   await db.insert(listingImages).values([
     {
       listingId: listing.id,
-      url: 'https://placehold.co/1600x900/0F3D35/F5F1EA.png?text=Living+room',
+      url: 'https://picsum.photos/seed/listora-living/1600/900',
       sortOrder: 0,
       isCover: true,
     },
     {
       listingId: listing.id,
-      url: 'https://placehold.co/1600x900/155448/F5F1EA.png?text=Kitchen',
+      url: 'https://picsum.photos/seed/listora-kitchen/1600/900',
       sortOrder: 1,
     },
     {
       listingId: listing.id,
-      url: 'https://placehold.co/1600x900/1F6B5C/F5F1EA.png?text=Balcony',
+      url: 'https://picsum.photos/seed/listora-balcony/1600/900',
       sortOrder: 2,
+    },
+    {
+      listingId: listing.id,
+      url: 'https://picsum.photos/seed/listora-plan/1200/900',
+      sortOrder: 3,
+      isFloorPlan: true,
     },
   ])
 

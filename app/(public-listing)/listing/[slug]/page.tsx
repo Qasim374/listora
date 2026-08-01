@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm'
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 
 import { ListingContact } from '@/components/listing-contact'
@@ -9,8 +10,11 @@ import { MortgageEstimate } from '@/components/mortgage-estimate'
 import { ViewTracker } from '@/components/view-tracker'
 import { db } from '@/lib/db'
 import { listingImages, listings } from '@/lib/db/schema'
+import { splitHighlightsAndFeatures } from '@/lib/listing-content'
 import { propertyTypeLabel } from '@/lib/property-types'
-import { formatPrice, formatSqft } from '@/lib/utils'
+import { saleStatus, saleStatusClasses } from '@/lib/sale-status'
+import { cn, formatPrice, formatSqft } from '@/lib/utils'
+import { parseVideoUrl } from '@/lib/video'
 
 type PageProps = {
   // Next 15 passes params as a Promise
@@ -70,17 +74,29 @@ export default async function PublicListingPage({ params }: PageProps) {
   if (!data) notFound()
 
   const { listing, images } = data
-  const highlights = listing.aiHighlights ?? []
+
+  // Highlights that merely restate a feature are dropped — see lib/listing-content.ts
+  const { highlights, features } = splitHighlightsAndFeatures(
+    listing.aiHighlights,
+    listing.features,
+  )
+
+  // Floor plans get their own section; a diagram between two room photos in the
+  // carousel reads as a mistake.
+  const photos = images.filter((image) => !image.isFloorPlan)
+  const floorPlans = images.filter((image) => image.isFloorPlan)
 
   // Cover photo leads, then whatever order the agent uploaded in.
-  const orderedImages = [...images].sort(
+  const orderedImages = [...photos].sort(
     (a, b) => Number(b.isCover) - Number(a.isCover) || a.sortOrder - b.sortOrder,
   )
+
+  const status = saleStatus(listing.saleStatus)
+  const video = parseVideoUrl(listing.videoUrl)
 
   const hasSpecs = listing.beds !== null || listing.baths !== null || listing.sqft !== null
 
   const typeLabel = propertyTypeLabel(listing.propertyType)
-  const features = listing.features ?? []
   const publicUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/listing/${listing.slug}`
 
   const daysListed = Math.max(
@@ -135,8 +151,13 @@ export default async function PublicListingPage({ params }: PageProps) {
           <article className="min-w-0">
             <div className="rounded-xl border border-sand-200 bg-sand-50 p-6 shadow-sm sm:p-8">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-brand-700">
-                  For sale
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide',
+                    saleStatusClasses(listing.saleStatus),
+                  )}
+                >
+                  {status.label}
                 </span>
                 {typeLabel ? (
                   <span className="rounded-full bg-sand-200 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
@@ -258,6 +279,53 @@ export default async function PublicListingPage({ params }: PageProps) {
                         />
                       </svg>
                       <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {video ? (
+              <section className="mt-10">
+                <h2 className="font-display text-xl text-brand-900">Video tour</h2>
+                <div className="mt-4 overflow-hidden rounded-xl border border-sand-200 bg-ink">
+                  <iframe
+                    title="Property video tour"
+                    src={video.embedUrl}
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                    allowFullScreen
+                    className="aspect-video w-full border-0"
+                  />
+                </div>
+              </section>
+            ) : null}
+
+            {floorPlans.length > 0 ? (
+              <section className="mt-10">
+                <h2 className="font-display text-xl text-brand-900">
+                  Floor plan
+                  {floorPlans.length > 1 ? (
+                    <span className="ml-2 text-sm font-normal text-ink-muted">
+                      ({floorPlans.length})
+                    </span>
+                  ) : null}
+                </h2>
+                <ul className="mt-4 space-y-4">
+                  {floorPlans.map((plan, index) => (
+                    <li
+                      key={plan.id}
+                      className="overflow-hidden rounded-xl border border-sand-200 bg-white"
+                    >
+                      {/* object-contain, not cover: a cropped floor plan is useless */}
+                      <Image
+                        src={plan.url}
+                        alt={`Floor plan ${index + 1} for ${listing.address}`}
+                        width={1600}
+                        height={1200}
+                        sizes="(max-width: 1024px) 100vw, 720px"
+                        className="h-auto w-full object-contain"
+                      />
                     </li>
                   ))}
                 </ul>

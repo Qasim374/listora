@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 import { MAX_IMAGES_PER_LISTING } from './blob'
 import { PROPERTY_TYPE_VALUES } from './property-types'
+import { SALE_STATUS_VALUES } from './sale-status'
+import { parseVideoUrl } from './video'
 
 /**
  * Empty form fields arrive as '' and must become null, not 0 — "price not
@@ -104,11 +106,29 @@ export const listingFormSchema = z.object({
     z.array(z.string().min(2).max(80)).max(40, 'Up to 40 features').default([]),
   ),
 
+  saleStatus: z.preprocess(
+    (value) => (value === '' || value === undefined || value === null ? 'for-sale' : value),
+    z.enum(SALE_STATUS_VALUES as [string, ...string[]]),
+  ),
+
+  // Validated by parsing rather than by regex: if we can't build an embed URL
+  // from it, the agent needs to know now, not after publishing.
+  videoUrl: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    z
+      .string()
+      .nullable()
+      .refine((value) => value === null || parseVideoUrl(value) !== null, {
+        message: 'Paste a YouTube or Vimeo link',
+      }),
+  ),
+
   images: z
     .array(
       z.object({
         url: z.string().url('An uploaded photo has an invalid URL'),
         isCover: z.boolean(),
+        isFloorPlan: z.boolean().default(false),
       }),
     )
     .max(MAX_IMAGES_PER_LISTING, `Up to ${MAX_IMAGES_PER_LISTING} images per listing`)

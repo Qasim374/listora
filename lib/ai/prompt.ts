@@ -67,7 +67,9 @@ ${input.rawDescription}
 Produce:
 - headline: one compelling line, under 120 characters, no address unless it genuinely sells the property.
 - description: 160-240 words, three paragraphs. Develop every fact above into something a buyer can picture. Do not merely restate the notes.
-- highlights: exactly 4 or 5 short bullet points, each under 120 characters, each naming a distinct concrete selling point.`
+- highlights: exactly 4 or 5 short bullet points, each under 120 characters, each naming a distinct concrete selling point.
+
+IMPORTANT about highlights: the property page already shows the agent's feature list verbatim, in its own section. Do NOT repeat those items as highlights — "South-west facing balcony" is already visible there. A highlight must add something the bare feature does not: what it means, what it enables, or how two facts combine. If you can only restate the feature list, return fewer highlights.`
 }
 
 /**

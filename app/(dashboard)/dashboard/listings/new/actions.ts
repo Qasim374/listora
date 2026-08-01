@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
 import { listingImages, listings } from '@/lib/db/schema'
+import { buildImageRows } from '@/lib/listing-images'
 import { getQuotaStatus } from '@/lib/quota'
 import { listingFormSchema } from '@/lib/validation'
 import { slugifyAddress } from '@/lib/utils'
@@ -66,6 +67,8 @@ export async function createListing(raw: unknown): Promise<CreateListingResult> 
         lotSize: values.lotSize,
         monthlyFee: values.monthlyFee,
         features: values.features,
+        videoUrl: values.videoUrl,
+        saleStatus: values.saleStatus,
         rawDescription: values.rawDescription,
         status: 'draft',
       })
@@ -74,21 +77,7 @@ export async function createListing(raw: unknown): Promise<CreateListingResult> 
     listingId = listing.id
 
     if (values.images.length > 0) {
-      // Guarantee exactly one cover: honour the chosen one, else fall back to
-      // the first image. The partial unique index would reject two.
-      const coverIndex = Math.max(
-        0,
-        values.images.findIndex((image) => image.isCover),
-      )
-
-      await db.insert(listingImages).values(
-        values.images.map((image, index) => ({
-          listingId: listing.id,
-          url: image.url,
-          sortOrder: index,
-          isCover: index === coverIndex,
-        })),
-      )
+      await db.insert(listingImages).values(buildImageRows(listing.id, values.images))
     }
   } catch (error) {
     console.error('Failed to create listing', error)
