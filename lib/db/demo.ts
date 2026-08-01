@@ -58,8 +58,13 @@ async function main() {
       propertyType: 'apartment',
       yearBuilt: 1928,
       monthlyFee: 3_450,
+      // Explicitly Swedish: kronor, m², and the amortisation-based estimate
+      market: 'se',
       saleStatus: 'for-sale',
       videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      // Storgatan 14, Stockholm — so the demo exercises the map
+      latitude: 59.3364,
+      longitude: 18.0839,
       features: [
         'South-west facing balcony',
         'Renovated kitchen (2021)',

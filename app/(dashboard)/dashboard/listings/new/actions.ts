@@ -69,6 +69,9 @@ export async function createListing(raw: unknown): Promise<CreateListingResult> 
         features: values.features,
         videoUrl: values.videoUrl,
         saleStatus: values.saleStatus,
+        market: values.market,
+        latitude: values.latitude,
+        longitude: values.longitude,
         rawDescription: values.rawDescription,
         status: 'draft',
       })

@@ -7,7 +7,7 @@ import { ListingCopyEditor } from '@/components/listing-copy-editor'
 import { getCurrentAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
 import { listingImages, listings } from '@/lib/db/schema'
-import { formatPrice, formatSqft } from '@/lib/utils'
+import { formatArea, formatDate, formatPrice } from '@/lib/format'
 
 export const dynamic = 'force-dynamic'
 // Generation is ~1-2s on Groq, but a slower provider (or a retry) shouldn't be
@@ -52,7 +52,7 @@ export default async function ListingDraftPage({ params }: PageProps) {
           <h1 className="font-display text-3xl text-brand-900">{listing.address}</h1>
           <p className="mt-1.5 text-sm text-ink-muted">
             {listing.status === 'published' ? 'Published' : 'Draft'} · saved{' '}
-            {listing.createdAt.toLocaleDateString('sv-SE')}
+            {formatDate(listing.createdAt, listing.market)}
           </p>
         </div>
 
@@ -71,7 +71,9 @@ export default async function ListingDraftPage({ params }: PageProps) {
       <dl className="card mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div>
           <dt className="text-xs uppercase tracking-wide text-ink-muted">Price</dt>
-          <dd className="mt-1 font-medium text-ink">{formatPrice(listing.price)}</dd>
+          <dd className="mt-1 font-medium text-ink">
+            {formatPrice(listing.price, listing.market)}
+          </dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-ink-muted">Bedrooms</dt>
@@ -83,7 +85,7 @@ export default async function ListingDraftPage({ params }: PageProps) {
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-ink-muted">Living area</dt>
-          <dd className="mt-1 font-medium text-ink">{formatSqft(listing.sqft)}</dd>
+          <dd className="mt-1 font-medium text-ink">{formatArea(listing.sqft, listing.market)}</dd>
         </div>
       </dl>
 

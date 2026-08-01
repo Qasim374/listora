@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { MAX_IMAGES_PER_LISTING } from './blob'
+import { DEFAULT_MARKET, MARKET_IDS } from './markets'
 import { PROPERTY_TYPE_VALUES } from './property-types'
 import { SALE_STATUS_VALUES } from './sale-status'
 import { parseVideoUrl } from './video'
@@ -106,6 +107,16 @@ export const listingFormSchema = z.object({
     z.array(z.string().min(2).max(80)).max(40, 'Up to 40 features').default([]),
   ),
 
+  // Range-checked so a mis-parsed value can't put a property in the ocean off
+  // the coast of nowhere. Both must be present or both absent.
+  latitude: nullableNumber('Latitude', z.number().min(-90).max(90)),
+  longitude: nullableNumber('Longitude', z.number().min(-180).max(180)),
+
+  market: z.preprocess(
+    (value) => (value === '' || value === undefined || value === null ? DEFAULT_MARKET : value),
+    z.enum(MARKET_IDS as [string, ...string[]]),
+  ),
+
   saleStatus: z.preprocess(
     (value) => (value === '' || value === undefined || value === null ? 'for-sale' : value),
     z.enum(SALE_STATUS_VALUES as [string, ...string[]]),
@@ -163,6 +174,10 @@ export type ListingCopyEdit = z.output<typeof listingCopyEditSchema>
 /** The agent's public identity, edited in dashboard settings. */
 export const agentProfileSchema = z.object({
   name: z.string().trim().min(2, 'Enter your name').max(120),
+  market: z.preprocess(
+    (value) => (value === '' || value === undefined || value === null ? DEFAULT_MARKET : value),
+    z.enum(MARKET_IDS as [string, ...string[]]),
+  ),
   phone: z
     .string()
     .trim()

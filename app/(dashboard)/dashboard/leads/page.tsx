@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireAgent } from '@/lib/auth/current-agent'
 import { db } from '@/lib/db'
 import { leads, listings } from '@/lib/db/schema'
+import { formatDateTime } from '@/lib/format'
 
 import { markLeadsRead } from './actions'
 
@@ -25,6 +26,7 @@ export default async function LeadsPage() {
       readAt: leads.readAt,
       listingSlug: listings.slug,
       listingAddress: listings.address,
+      listingMarket: listings.market,
     })
     .from(leads)
     .innerJoin(listings, eq(leads.listingId, listings.id))
@@ -90,11 +92,7 @@ export default async function LeadsPage() {
                     ) : null}
                   </div>
                   <p className="mt-1 text-sm text-ink-muted">
-                    {lead.listingAddress} ·{' '}
-                    {lead.createdAt.toLocaleString('sv-SE', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
+                    {lead.listingAddress} · {formatDateTime(lead.createdAt, lead.listingMarket)}
                   </p>
                 </div>
 

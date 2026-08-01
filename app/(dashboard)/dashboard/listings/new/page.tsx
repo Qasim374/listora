@@ -49,7 +49,7 @@ export default async function NewListingPage() {
       </p>
 
       <div className="mt-8">
-        <ListingForm uploadsEnabled={isBlobConfigured()} />
+        <ListingForm uploadsEnabled={isBlobConfigured()} defaultMarket={agent.market} />
       </div>
     </div>
   )

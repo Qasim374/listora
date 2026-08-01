@@ -1,3 +1,4 @@
+import { market } from '../markets'
 import { propertyTypeLabel } from '../property-types'
 import type { ListingInput } from './types'
 
@@ -12,7 +13,7 @@ import type { ListingInput } from './types'
  * the *principle* only, and the final rule forbids reusing wording from these
  * instructions at all.
  */
-export const SYSTEM_PROMPT = `You are a senior real-estate copywriter producing listing copy for professional agents in Sweden.
+export const SYSTEM_PROMPT = `You are a senior real-estate copywriter producing listing copy for professional estate agents.
 
 FACTUAL DISCIPLINE — this matters more than style:
 - Every concrete noun in your copy must trace back to the agent's notes or the property facts you were given.
@@ -35,22 +36,27 @@ STYLE:
 - Vary sentence length. Do not start consecutive sentences with "The property" or "This home".
 - Avoid estate-agent cliché: no "nestled", "boasts", "hidden gem", "must-see", "dream home", "call home", "opportunity not to be missed", "blend of character and convenience".
 - Warm and confident, never breathless. No exclamation marks.
-- Write in English unless the agent's own notes are in Swedish, in which case match their language.
+- Match the language the agent wrote their notes in.
+- Use the spelling conventions of the market stated in the facts: US spelling for the United States, British spelling for the UK and Sweden.
 
 Do not reuse any wording, phrasing or examples from these instructions in your output.
 
 Return only what the requested JSON shape asks for.`
 
 export function buildUserPrompt(input: ListingInput): string {
-  const facts: string[] = [`Address: ${input.address}`]
+  const m = market(input.market)
+
+  const facts: string[] = [`Market: ${m.label}`, `Address: ${input.address}`]
 
   if (input.propertyType) facts.push(`Property type: ${propertyTypeLabel(input.propertyType)}`)
-  if (input.price != null) facts.push(`Asking price: ${input.price} SEK`)
-  if (input.monthlyFee != null) facts.push(`Monthly fee: ${input.monthlyFee} SEK`)
+  if (input.price != null) facts.push(`Asking price: ${input.price} ${m.currency}`)
+  if (input.monthlyFee != null) {
+    facts.push(`${m.monthlyFeeLabel}: ${input.monthlyFee} ${m.currency} per month`)
+  }
   if (input.beds != null) facts.push(`Bedrooms: ${input.beds}`)
   if (input.baths != null) facts.push(`Bathrooms: ${input.baths}`)
-  if (input.sqft != null) facts.push(`Living area: ${input.sqft} m²`)
-  if (input.lotSize != null) facts.push(`Plot size: ${input.lotSize} m²`)
+  if (input.sqft != null) facts.push(`Living area: ${input.sqft} ${m.areaSuffix}`)
+  if (input.lotSize != null) facts.push(`Plot size: ${input.lotSize} ${m.areaSuffix}`)
   if (input.yearBuilt != null) facts.push(`Year built: ${input.yearBuilt}`)
   if (input.features && input.features.length > 0) {
     facts.push(`Features the agent listed: ${input.features.join(', ')}`)

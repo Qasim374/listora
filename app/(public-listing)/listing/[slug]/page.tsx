@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { AgentCard } from '@/components/agent-card'
 import { ListingGallery } from '@/components/listing-gallery'
 import { ListingLeadForm } from '@/components/listing-lead-form'
+import { ListingMap } from '@/components/map/listing-map'
 import { ListingShare } from '@/components/listing-share'
 import { MortgageEstimate } from '@/components/mortgage-estimate'
 import { ViewTracker } from '@/components/view-tracker'
@@ -14,7 +15,9 @@ import { listingImages, listings, users } from '@/lib/db/schema'
 import { splitHighlightsAndFeatures } from '@/lib/listing-content'
 import { propertyTypeLabel } from '@/lib/property-types'
 import { saleStatus, saleStatusClasses } from '@/lib/sale-status'
-import { cn, formatPrice, formatSqft } from '@/lib/utils'
+import { formatArea, formatPrice, formatPricePerArea } from '@/lib/format'
+import { market } from '@/lib/markets'
+import { cn } from '@/lib/utils'
 import { parseVideoUrl } from '@/lib/video'
 
 type PageProps = {
@@ -120,12 +123,11 @@ export default async function PublicListingPage({ params }: PageProps) {
     Math.floor((Date.now() - listing.createdAt.getTime()) / 86_400_000),
   )
 
-  // Buyers in Sweden compare on kr/m², so derive it rather than making the
-  // agent calculate it. Only meaningful when both numbers are present.
-  const pricePerSqm =
-    listing.price !== null && listing.sqft !== null && listing.sqft > 0
-      ? Math.round(listing.price / listing.sqft)
-      : null
+  const activeMarket = market(listing.market)
+
+  // Buyers compare on price per unit area in every market, so derive it rather
+  // than making the agent calculate it.
+  const pricePerArea = formatPricePerArea(listing.price, listing.sqft, listing.market)
 
   /**
    * The full detail table, HAR-style. Built as data so the markup stays flat and
@@ -135,13 +137,19 @@ export default async function PublicListingPage({ params }: PageProps) {
     typeLabel && { label: 'Property type', value: typeLabel },
     // Bedrooms, bathrooms and living area are deliberately absent: they already
     // appear in the hero above, and repeating them makes the table look padded.
-    listing.lotSize !== null && { label: 'Plot size', value: formatSqft(listing.lotSize) },
+    listing.lotSize !== null && {
+      label: 'Plot size',
+      value: formatArea(listing.lotSize, listing.market),
+    },
     listing.yearBuilt !== null && { label: 'Year built', value: String(listing.yearBuilt) },
     listing.monthlyFee !== null && {
-      label: 'Monthly fee',
-      value: formatPrice(listing.monthlyFee),
+      label: activeMarket.monthlyFeeLabel,
+      value: formatPrice(listing.monthlyFee, listing.market),
     },
-    pricePerSqm !== null && { label: 'Price per m²', value: formatPrice(pricePerSqm) },
+    pricePerArea !== null && {
+      label: `Price per ${activeMarket.areaSuffix}`,
+      value: pricePerArea,
+    },
     // Derived from the id, not the slug: a slug tail like "TAN-14" is a
     // meaningless fragment of the address, while the id is always clean hex.
     { label: 'Reference', value: `LST-${listing.id.replace(/-/g, '').slice(0, 6).toUpperCase()}` },
@@ -192,14 +200,17 @@ export default async function PublicListingPage({ params }: PageProps) {
               </h1>
 
               <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <p className="text-3xl font-medium text-brand-700">{formatPrice(listing.price)}</p>
+                <p className="text-3xl font-medium text-brand-700">
+                  {formatPrice(listing.price, listing.market)}
+                </p>
                 {listing.monthlyFee !== null ? (
                   <p className="text-sm text-ink-muted">
-                    + {formatPrice(listing.monthlyFee)} / month fee
+                    + {formatPrice(listing.monthlyFee, listing.market)} /month{' '}
+                    {activeMarket.monthlyFeeLabel.toLowerCase()}
                   </p>
                 ) : null}
-                {pricePerSqm !== null ? (
-                  <p className="text-sm text-ink-muted">{formatPrice(pricePerSqm)} / m²</p>
+                {pricePerArea !== null ? (
+                  <p className="text-sm text-ink-muted">{pricePerArea}</p>
                 ) : null}
               </div>
 
@@ -222,7 +233,9 @@ export default async function PublicListingPage({ params }: PageProps) {
                   {listing.sqft !== null ? (
                     <div>
                       <dt className="text-ink-muted">Living area</dt>
-                      <dd className="mt-0.5 font-medium text-ink">{formatSqft(listing.sqft)}</dd>
+                      <dd className="mt-0.5 font-medium text-ink">
+                        {formatArea(listing.sqft, listing.market)}
+                      </dd>
                     </div>
                   ) : null}
                 </dl>
@@ -371,26 +384,37 @@ export default async function PublicListingPage({ params }: PageProps) {
             </section>
 
             {listing.price !== null && listing.price > 0 ? (
-              <MortgageEstimate price={listing.price} monthlyFee={listing.monthlyFee} />
+              <MortgageEstimate
+                marketId={listing.market}
+                price={listing.price}
+                monthlyFee={listing.monthlyFee}
+              />
             ) : null}
 
-            <section>
-              <h2 className="font-display text-lg text-brand-900">Location</h2>
-              <div className="mt-3 overflow-hidden rounded-xl border border-sand-200">
-                {/* Keyless Google Maps embed. No geocoding step and no API key to
-                    manage; the address string is all it needs. */}
-                <iframe
-                  title={`Map of ${listing.address}`}
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.address)}&output=embed`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="h-64 w-full border-0"
-                />
-              </div>
-              <p className="mt-2 text-xs text-ink-muted">
-                Map position is approximate, based on the address supplied by the agent.
-              </p>
-            </section>
+            {/**
+             * Shown only when the agent has actually pinned the location.
+             *
+             * This replaced a keyless Google Maps embed that guessed a position
+             * from the address string. Two reasons: the guess was often wrong for
+             * rural and new-build addresses with no way to correct it, and the
+             * Google iframe set third-party cookies with no consent — a real
+             * problem for an EU product. OpenStreetMap tiles set none.
+             *
+             * No pin means no map, rather than a confidently wrong one.
+             */}
+            {listing.latitude !== null && listing.longitude !== null ? (
+              <section>
+                <h2 className="font-display text-lg text-brand-900">Location</h2>
+                <div className="mt-3 overflow-hidden rounded-xl border border-sand-200">
+                  <ListingMap
+                    latitude={listing.latitude}
+                    longitude={listing.longitude}
+                    label={listing.address}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-ink-muted">Pin placed by the selling agent.</p>
+              </section>
+            ) : null}
           </aside>
         </div>
       </div>
@@ -400,7 +424,9 @@ export default async function PublicListingPage({ params }: PageProps) {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-ink-muted">{listing.address}</p>
-            <p className="font-medium text-brand-700">{formatPrice(listing.price)}</p>
+            <p className="font-medium text-brand-700">
+              {formatPrice(listing.price, listing.market)}
+            </p>
           </div>
           <a href="#contact" className="btn-primary shrink-0">
             Contact agent

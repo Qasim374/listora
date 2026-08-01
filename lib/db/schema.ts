@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   boolean,
+  doublePrecision,
   integer,
   jsonb,
   numeric,
@@ -40,6 +41,8 @@ export const users = pgTable('users', {
   brokerageLogoUrl: text('brokerage_logo_url'),
   /** Registration number. Required by law to display in many markets. */
   licenseNumber: text('license_number'),
+  /** Default market for this agent's new listings. See lib/markets.ts. */
+  market: text('market').notNull().default('us'),
   // Matches a key in lib/plans.ts — 'free' | 'starter' | 'pro'
   subscriptionTier: text('subscription_tier').notNull().default('free'),
   stripeCustomerId: text('stripe_customer_id').unique(),
@@ -71,17 +74,30 @@ export const listings = pgTable('listings', {
   beds: integer('beds'),
   // numeric so "1.5 baths" is representable
   baths: numeric('baths', { precision: 3, scale: 1 }),
+  /**
+   * Interior living area, in the unit of this listing's market — square feet for
+   * US/UK, m² for Sweden. The column name is historical; formatArea() renders it
+   * with the right suffix rather than assuming one.
+   */
   sqft: integer('sqft'),
 
-  // 'apartment' | 'house' | 'townhouse' | 'holiday-home' | 'plot' | 'other'
+  /**
+   * Which market's currency, units and mortgage rules this listing uses.
+   *
+   * Stored per listing, not just per agent: an agent who changes country must not
+   * cause every past listing's price to silently relabel into another currency.
+   */
+  market: text('market').notNull().default('us'),
+
+  // See PROPERTY_TYPE_LABELS in lib/markets.ts for the full set
   propertyType: text('property_type'),
   yearBuilt: integer('year_built'),
-  /** Plot/land area in m². Distinct from sqft, which is interior living area. */
+  /** Plot/land area, same unit as sqft. Distinct from interior living area. */
   lotSize: integer('lot_size'),
   /**
-   * Monthly fee in SEK ("avgift"). Essential for Swedish apartments — a low
-   * asking price with a high monthly fee is a materially different deal, and
-   * buyers here compare on it directly.
+   * Recurring building charge: HOA fee in the US, service charge in the UK,
+   * avgift in Sweden. A low asking price with a high monthly charge is a
+   * materially different deal, and buyers compare on it directly everywhere.
    */
   monthlyFee: integer('monthly_fee'),
 
@@ -90,6 +106,19 @@ export const listings = pgTable('listings', {
 
   /** YouTube or Vimeo link. Stored as given; converted to an embed at render. */
   videoUrl: text('video_url'),
+
+  /**
+   * Exact pin position, set by the agent dragging a marker.
+   *
+   * doublePrecision rather than numeric: these are read on every listing view
+   * and never summed, so float accuracy is fine — and ~7 decimal places is
+   * roughly 1cm, far beyond what a dragged pin conveys.
+   *
+   * Nullable because the pin is optional. A listing with no coordinates shows no
+   * map rather than guessing a position from the address text.
+   */
+  latitude: doublePrecision('latitude'),
+  longitude: doublePrecision('longitude'),
 
   rawDescription: text('raw_description').notNull(),
 

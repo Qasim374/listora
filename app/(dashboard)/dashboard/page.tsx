@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { listings } from '@/lib/db/schema'
 import { getPlan } from '@/lib/plans'
 import { getQuotaStatus } from '@/lib/quota'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice } from '@/lib/format'
 
 export const metadata = { title: 'Your listings' }
 
@@ -78,7 +78,8 @@ export default async function DashboardPage() {
                   </span>
                 </div>
                 <p className="mt-1 truncate text-sm text-ink-muted">
-                  {listing.address} · {formatPrice(listing.price)} · {listing.viewCount} views
+                  {listing.address} · {formatPrice(listing.price, listing.market)} ·{' '}
+                  {listing.viewCount} views
                 </p>
               </div>
 

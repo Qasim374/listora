@@ -6,8 +6,10 @@ import { useRef, useState, useTransition } from 'react'
 import { updateListing } from '@/app/(dashboard)/dashboard/listings/[id]/actions'
 import { createListing } from '@/app/(dashboard)/dashboard/listings/new/actions'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGES_PER_LISTING, MAX_IMAGE_BYTES } from '@/lib/blob'
+import { MapPicker, type LatLng } from '@/components/map/map-picker'
+import { market, MARKET_IDS } from '@/lib/markets'
 import { checkPlausibility } from '@/lib/plausibility'
-import { PROPERTY_TYPES } from '@/lib/property-types'
+import { propertyTypesFor } from '@/lib/property-types'
 import { SALE_STATUSES } from '@/lib/sale-status'
 import { cn } from '@/lib/utils'
 
@@ -52,8 +54,11 @@ export type ListingFormInitial = {
   lotSize: number | null
   monthlyFee: number | null
   features: string[] | null
+  market: string
   saleStatus: string
   videoUrl: string | null
+  latitude: number | null
+  longitude: number | null
   rawDescription: string
   images: Array<{ id: string; url: string; isCover: boolean; isFloorPlan: boolean }>
 }
@@ -63,11 +68,22 @@ const text = (value: number | string | null) => (value === null ? '' : String(va
 export function ListingForm({
   uploadsEnabled,
   initial,
+  defaultMarket,
 }: {
   uploadsEnabled: boolean
   initial?: ListingFormInitial
+  /** The agent's own market, used for new listings. */
+  defaultMarket: string
 }) {
   const editing = initial !== undefined
+
+  /**
+   * Selected in state, not just read on submit: currency symbols, area units,
+   * property-type options, the typo thresholds and the phone placeholder all
+   * change the moment it does.
+   */
+  const [marketId, setMarketId] = useState(initial?.market ?? defaultMarket)
+  const activeMarket = market(marketId)
 
   const [images, setImages] = useState<UploadedImage[]>(() =>
     // Already-uploaded photos start in the 'done' state with previewUrl pointing
@@ -101,6 +117,16 @@ export function ListingForm({
     initial?.images.find((image) => image.isCover)?.id ?? initial?.images[0]?.id ?? null,
   )
   const [dragging, setDragging] = useState(false)
+
+  // Address is tracked in state (not just read on submit) so the map's
+  // "Find address" button can use whatever is currently typed.
+  const [address, setAddress] = useState(initial?.address ?? '')
+
+  const [pin, setPin] = useState<LatLng | null>(
+    initial?.latitude != null && initial?.longitude != null
+      ? { latitude: initial.latitude, longitude: initial.longitude }
+      : null,
+  )
   const [formError, setFormError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -111,12 +137,16 @@ export function ListingForm({
   const uploading = images.some((image) => image.status === 'uploading')
 
   // Live typo check on the numbers. Warnings only — they never block saving.
-  const warnings = checkPlausibility({
-    price: toNumberOrNull(facts.price),
-    beds: toNumberOrNull(facts.beds),
-    baths: toNumberOrNull(facts.baths),
-    sqft: toNumberOrNull(facts.sqft),
-  })
+  // Market-aware: 1,500 is a normal US home in sq ft, implausible in m².
+  const warnings = checkPlausibility(
+    {
+      price: toNumberOrNull(facts.price),
+      beds: toNumberOrNull(facts.beds),
+      baths: toNumberOrNull(facts.baths),
+      sqft: toNumberOrNull(facts.sqft),
+    },
+    marketId,
+  )
 
   function setFact(key: keyof typeof EMPTY_FACTS) {
     return (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -223,8 +253,12 @@ export function ListingForm({
       lotSize: String(data.get('lotSize') ?? ''),
       monthlyFee: String(data.get('monthlyFee') ?? ''),
       features: String(data.get('features') ?? ''),
+      market: marketId,
       saleStatus: String(data.get('saleStatus') ?? 'for-sale'),
       videoUrl: String(data.get('videoUrl') ?? ''),
+      // Sent as strings so the same nullableNumber coercion handles them
+      latitude: pin ? String(pin.latitude) : '',
+      longitude: pin ? String(pin.longitude) : '',
       images: images
         .filter((image) => image.status === 'done' && image.url)
         .map((image) => ({
@@ -395,6 +429,39 @@ export function ListingForm({
 
       {/* ----------------------------------------------------------------- facts */}
       <section>
+        <h2 className="font-display text-lg text-brand-900">Market</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Sets the currency, the area unit and which mortgage rules the monthly-cost estimate uses.
+          Stored with this listing, so changing it later never relabels old prices.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {MARKET_IDS.map((id) => {
+            const option = market(id)
+            const selected = id === marketId
+
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMarketId(id)}
+                className={cn(
+                  'rounded-lg border px-4 py-2 text-sm transition-colors',
+                  selected
+                    ? 'border-brand-500 bg-brand-50 font-medium text-brand-800'
+                    : 'border-sand-300 bg-sand-50 text-ink-soft hover:bg-sand-100',
+                )}
+              >
+                {option.label}
+                <span className="ml-2 text-xs text-ink-muted">
+                  {option.currency} · {option.areaSuffix}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      <section>
         <h2 className="font-display text-lg text-brand-900">The facts</h2>
 
         <div className="mt-3 space-y-4">
@@ -403,14 +470,19 @@ export function ListingForm({
               id="address"
               name="address"
               required
-              defaultValue={initial?.address ?? ''}
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
               placeholder="Storgatan 14, 114 55 Stockholm"
               className="input"
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Field name="price" label="Price (SEK)" error={fieldErrors.price}>
+            <Field
+              name="price"
+              label={`Price (${activeMarket.currency})`}
+              error={fieldErrors.price}
+            >
               <input
                 id="price"
                 name="price"
@@ -447,7 +519,11 @@ export function ListingForm({
                 className="input"
               />
             </Field>
-            <Field name="sqft" label="Living area (m²)" error={fieldErrors.sqft}>
+            <Field
+              name="sqft"
+              label={`Living area (${activeMarket.areaSuffix})`}
+              error={fieldErrors.sqft}
+            >
               <input
                 id="sqft"
                 name="sqft"
@@ -472,7 +548,7 @@ export function ListingForm({
                 className="input"
               >
                 <option value="">Not specified</option>
-                {PROPERTY_TYPES.map((type) => (
+                {propertyTypesFor(marketId).map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
                   </option>
@@ -492,7 +568,11 @@ export function ListingForm({
                 className="input"
               />
             </Field>
-            <Field name="lotSize" label="Plot size (m²)" error={fieldErrors.lotSize}>
+            <Field
+              name="lotSize"
+              label={`Plot size (${activeMarket.areaSuffix})`}
+              error={fieldErrors.lotSize}
+            >
               <input
                 id="lotSize"
                 name="lotSize"
@@ -504,7 +584,11 @@ export function ListingForm({
                 className="input"
               />
             </Field>
-            <Field name="monthlyFee" label="Monthly fee (SEK)" error={fieldErrors.monthlyFee}>
+            <Field
+              name="monthlyFee"
+              label={`${activeMarket.monthlyFeeLabel} (${activeMarket.currency})`}
+              error={fieldErrors.monthlyFee}
+            >
               <input
                 id="monthlyFee"
                 name="monthlyFee"
@@ -532,6 +616,17 @@ export function ListingForm({
       </section>
 
       {/* ----------------------------------------------------------------- notes */}
+      <section>
+        <h2 className="font-display text-lg text-brand-900">Pin the location</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Optional, but worth doing. Without a pin no map is shown at all — and an address alone
+          often puts a rural or new-build property in the wrong place.
+        </p>
+        <div className="mt-3">
+          <MapPicker value={pin} onChange={setPin} addressForSearch={address} />
+        </div>
+      </section>
+
       <section>
         <h2 className="font-display text-lg text-brand-900">Status &amp; video</h2>
 

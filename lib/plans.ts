@@ -11,7 +11,13 @@ export type PlanId = 'free' | 'starter' | 'pro'
 export type Plan = {
   id: PlanId
   name: string
-  /** Monthly price in SEK. 0 for the free tier. */
+  /**
+   * Monthly price in USD. 0 for the free tier.
+   *
+   * This is what Listora charges its agents — deliberately one currency, unlike
+   * listing prices which follow each listing's market. Was previously SEK, which
+   * made no sense on a pricing page shown to US and UK prospects.
+   */
   price: number
   /** Max listings creatable per billing period. */
   listingLimit: number
@@ -34,7 +40,7 @@ export const PLANS: Record<PlanId, Plan> = {
   starter: {
     id: 'starter',
     name: 'Starter',
-    price: 299,
+    price: 29,
     listingLimit: 25,
     features: [
       'AI-enhanced copy',
@@ -47,7 +53,7 @@ export const PLANS: Record<PlanId, Plan> = {
   pro: {
     id: 'pro',
     name: 'Pro',
-    price: 799,
+    price: 79,
     listingLimit: 200,
     features: [
       'AI-enhanced copy',

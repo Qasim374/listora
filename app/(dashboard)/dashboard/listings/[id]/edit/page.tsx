@@ -50,7 +50,9 @@ export default async function EditListingPage({ params }: PageProps) {
       <div className="mt-8">
         <ListingForm
           uploadsEnabled={isBlobConfigured()}
+          defaultMarket={agent.market}
           initial={{
+            market: listing.market,
             id: listing.id,
             address: listing.address,
             price: listing.price,
@@ -64,6 +66,8 @@ export default async function EditListingPage({ params }: PageProps) {
             features: listing.features,
             saleStatus: listing.saleStatus,
             videoUrl: listing.videoUrl,
+            latitude: listing.latitude,
+            longitude: listing.longitude,
             rawDescription: listing.rawDescription,
             images: images.map((image) => ({
               id: image.id,

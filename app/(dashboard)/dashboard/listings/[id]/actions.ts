@@ -65,6 +65,7 @@ export async function generateCopy(listingId: string): Promise<ActionResult> {
       lotSize: listing.lotSize,
       monthlyFee: listing.monthlyFee,
       features: listing.features,
+      market: listing.market,
     })
 
     await db
@@ -235,6 +236,9 @@ export async function updateListing(listingId: string, raw: unknown): Promise<Ac
         features: values.features,
         videoUrl: values.videoUrl,
         saleStatus: values.saleStatus,
+        market: values.market,
+        latitude: values.latitude,
+        longitude: values.longitude,
         rawDescription: values.rawDescription,
         updatedAt: new Date(),
       })

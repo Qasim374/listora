@@ -4,6 +4,8 @@ import { z } from 'zod'
 export type ListingInput = {
   address: string
   rawDescription: string
+  /** Market id — drives currency, units and spelling in the prompt. */
+  market?: string | null
   price?: number | null
   beds?: number | null
   baths?: number | null

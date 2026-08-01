@@ -6,12 +6,14 @@ import { useState, useTransition } from 'react'
 import { updateAgentProfile } from '@/app/(dashboard)/dashboard/settings/actions'
 import { AgentCard } from '@/components/agent-card'
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES } from '@/lib/blob'
+import { market, MARKET_IDS } from '@/lib/markets'
 
 type Props = {
   uploadsEnabled: boolean
   initial: {
     name: string
     email: string
+    market: string
     phone: string | null
     brokerageName: string | null
     brokerageLogoUrl: string | null
@@ -22,6 +24,7 @@ type Props = {
 
 export function AgentProfileForm({ uploadsEnabled, initial }: Props) {
   const [name, setName] = useState(initial.name)
+  const [marketId, setMarketId] = useState(initial.market)
   const [brokerageName, setBrokerageName] = useState(initial.brokerageName ?? '')
   const [licenseNumber, setLicenseNumber] = useState(initial.licenseNumber ?? '')
   const [headshotUrl, setHeadshotUrl] = useState(initial.headshotUrl ?? '')
@@ -74,6 +77,7 @@ export function AgentProfileForm({ uploadsEnabled, initial }: Props) {
     startTransition(async () => {
       const result = await updateAgentProfile({
         name,
+        market: marketId,
         phone: String(data.get('phone') ?? ''),
         brokerageName,
         licenseNumber,
@@ -120,6 +124,34 @@ export function AgentProfileForm({ uploadsEnabled, initial }: Props) {
           </p>
         </div>
 
+        <div>
+          <span className="label">Your market</span>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            The default for new listings. Each listing keeps its own, so changing this never alters
+            prices on listings you already published.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {MARKET_IDS.map((id) => {
+              const option = market(id)
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMarketId(id)}
+                  className={
+                    id === marketId
+                      ? 'rounded-lg border border-brand-500 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-800'
+                      : 'rounded-lg border border-sand-300 bg-sand-50 px-4 py-2 text-sm text-ink-soft hover:bg-sand-100'
+                  }
+                >
+                  {option.label}
+                  <span className="ml-2 text-xs text-ink-muted">{option.currency}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="phone" className="label">
@@ -130,13 +162,13 @@ export function AgentProfileForm({ uploadsEnabled, initial }: Props) {
               name="phone"
               type="tel"
               defaultValue={initial.phone ?? ''}
-              placeholder="+46 70 123 45 67"
+              placeholder={market(marketId).phonePlaceholder}
               className="input"
             />
           </div>
           <div>
             <label htmlFor="licenseNumber" className="label">
-              Registration number
+              {market(marketId).licenseLabel}
             </label>
             <input
               id="licenseNumber"

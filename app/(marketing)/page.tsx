@@ -1,7 +1,6 @@
 import Link from 'next/link'
 
 import { PLANS, PLAN_ORDER } from '@/lib/plans'
-import { formatPrice } from '@/lib/utils'
 
 export const metadata = {
   title: 'Listora — Property listings that sell themselves',
@@ -288,7 +287,7 @@ export default function MarketingHomePage() {
 
                 <p className="mt-3">
                   <span className="font-display text-4xl text-brand-800">
-                    {plan.price === 0 ? 'Free' : formatPrice(plan.price)}
+                    {plan.price === 0 ? 'Free' : `$${plan.price}`}
                   </span>
                   {plan.price > 0 ? <span className="text-sm text-ink-muted"> / month</span> : null}
                 </p>

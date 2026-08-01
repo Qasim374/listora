@@ -22,6 +22,7 @@ export default async function SettingsPage() {
           initial={{
             name: agent.name,
             email: agent.email,
+            market: agent.market,
             phone: agent.phone,
             brokerageName: agent.brokerageName,
             brokerageLogoUrl: agent.brokerageLogoUrl,
