@@ -29,10 +29,17 @@ async function main() {
 
   if (existing) {
     // Backfill columns added to the schema after this row was created
-    const patch: { phone?: string; passwordHash?: string } = {}
+    const patch: {
+      phone?: string
+      passwordHash?: string
+      brokerageName?: string
+      licenseNumber?: string
+    } = {}
 
     if (!existing.phone) patch.phone = phone
     if (!existing.passwordHash) patch.passwordHash = await hashPassword(devPassword)
+    if (!existing.brokerageName) patch.brokerageName = 'Listora Fastighetsbyrå'
+    if (!existing.licenseNumber) patch.licenseNumber = 'SE-2026-00123'
 
     if (Object.keys(patch).length > 0) {
       await db.update(users).set(patch).where(eq(users.id, existing.id))
@@ -53,6 +60,8 @@ async function main() {
       email,
       phone,
       passwordHash: await hashPassword(devPassword),
+      brokerageName: 'Listora Fastighetsbyrå',
+      licenseNumber: 'SE-2026-00123',
       subscriptionTier: 'pro', // generous quota while developing
     })
     .returning()

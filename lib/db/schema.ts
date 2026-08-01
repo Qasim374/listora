@@ -32,6 +32,14 @@ export const users = pgTable('users', {
    * Nullable so the dev-seeded agent can exist before a password is set.
    */
   passwordHash: text('password_hash'),
+
+  // --- public-facing identity, shown on every listing this agent owns
+  /** Blob URL. Buyers trust a face far more than a name alone. */
+  headshotUrl: text('headshot_url'),
+  brokerageName: text('brokerage_name'),
+  brokerageLogoUrl: text('brokerage_logo_url'),
+  /** Registration number. Required by law to display in many markets. */
+  licenseNumber: text('license_number'),
   // Matches a key in lib/plans.ts — 'free' | 'starter' | 'pro'
   subscriptionTier: text('subscription_tier').notNull().default('free'),
   stripeCustomerId: text('stripe_customer_id').unique(),
@@ -143,6 +151,36 @@ export const listingImages = pgTable(
       .where(sql`${table.isCover}`),
   ],
 )
+
+/**
+ * Buyer enquiries from the public listing page.
+ *
+ * agentId is denormalised alongside listingId so the dashboard can list an
+ * agent's leads without joining through listings — and so a lead survives as a
+ * record even though deleting a listing cascades it away. (If leads should
+ * outlive their listing, change that FK to `set null` and keep the address.)
+ */
+export const leads = pgTable('leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listingId: uuid('listing_id')
+    .notNull()
+    .references(() => listings.id, { onDelete: 'cascade' }),
+  agentId: uuid('agent_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  name: text('name').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  message: text('message').notNull(),
+
+  /** Cleared when the agent opens the lead, so new ones can be counted. */
+  readAt: timestamp('read_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type Lead = typeof leads.$inferSelect
+export type NewLead = typeof leads.$inferInsert
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert

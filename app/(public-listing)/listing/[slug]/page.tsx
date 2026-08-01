@@ -3,13 +3,14 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 
-import { ListingContact } from '@/components/listing-contact'
+import { AgentCard } from '@/components/agent-card'
 import { ListingGallery } from '@/components/listing-gallery'
+import { ListingLeadForm } from '@/components/listing-lead-form'
 import { ListingShare } from '@/components/listing-share'
 import { MortgageEstimate } from '@/components/mortgage-estimate'
 import { ViewTracker } from '@/components/view-tracker'
 import { db } from '@/lib/db'
-import { listingImages, listings } from '@/lib/db/schema'
+import { listingImages, listings, users } from '@/lib/db/schema'
 import { splitHighlightsAndFeatures } from '@/lib/listing-content'
 import { propertyTypeLabel } from '@/lib/property-types'
 import { saleStatus, saleStatusClasses } from '@/lib/sale-status'
@@ -32,13 +33,28 @@ async function getListing(slug: string) {
 
   if (!listing || listing.status !== 'published') return null
 
-  const images = await db
-    .select()
-    .from(listingImages)
-    .where(eq(listingImages.listingId, listing.id))
-    .orderBy(asc(listingImages.sortOrder))
+  const [images, agent] = await Promise.all([
+    db
+      .select()
+      .from(listingImages)
+      .where(eq(listingImages.listingId, listing.id))
+      .orderBy(asc(listingImages.sortOrder)),
+    // Only the public-facing columns. Email and phone are deliberately not
+    // selected — buyers reach the agent through the enquiry form, so those never
+    // enter the HTML of a page built to be shared widely.
+    db.query.users.findFirst({
+      where: eq(users.id, listing.agentId),
+      columns: {
+        name: true,
+        headshotUrl: true,
+        brokerageName: true,
+        brokerageLogoUrl: true,
+        licenseNumber: true,
+      },
+    }),
+  ])
 
-  return { listing, images }
+  return { listing, images, agent: agent ?? null }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -73,7 +89,7 @@ export default async function PublicListingPage({ params }: PageProps) {
 
   if (!data) notFound()
 
-  const { listing, images } = data
+  const { listing, images, agent } = data
 
   // Highlights that merely restate a feature are dropped — see lib/listing-content.ts
   const { highlights, features } = splitHighlightsAndFeatures(
@@ -341,8 +357,17 @@ export default async function PublicListingPage({ params }: PageProps) {
           </article>
 
           <aside className="space-y-6 lg:self-start">
-            <section className="card text-center" id="contact">
-              <ListingContact slug={listing.slug} />
+            <section className="card" id="contact">
+              {agent ? (
+                <>
+                  <AgentCard agent={agent} />
+                  <div className="mt-5 border-t border-sand-200 pt-5">
+                    <ListingLeadForm slug={listing.slug} agentName={agent.name} />
+                  </div>
+                </>
+              ) : (
+                <ListingLeadForm slug={listing.slug} agentName="the agent" />
+              )}
             </section>
 
             {listing.price !== null && listing.price > 0 ? (

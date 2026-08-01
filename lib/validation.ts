@@ -159,3 +159,82 @@ export const listingCopyEditSchema = z.object({
 })
 
 export type ListingCopyEdit = z.output<typeof listingCopyEditSchema>
+
+/** The agent's public identity, edited in dashboard settings. */
+export const agentProfileSchema = z.object({
+  name: z.string().trim().min(2, 'Enter your name').max(120),
+  phone: z
+    .string()
+    .trim()
+    .max(40, 'Phone number is too long')
+    .transform((value) => (value === '' ? null : value)),
+  brokerageName: z
+    .string()
+    .trim()
+    .max(120, 'Agency name is too long')
+    .transform((value) => (value === '' ? null : value)),
+  licenseNumber: z
+    .string()
+    .trim()
+    .max(60, 'Registration number is too long')
+    .transform((value) => (value === '' ? null : value)),
+  headshotUrl: z
+    .string()
+    .trim()
+    .max(600)
+    .transform((value) => (value === '' ? null : value))
+    .refine((value) => value === null || /^https:\/\//.test(value), 'Invalid image URL'),
+  brokerageLogoUrl: z
+    .string()
+    .trim()
+    .max(600)
+    .transform((value) => (value === '' ? null : value))
+    .refine((value) => value === null || /^https:\/\//.test(value), 'Invalid image URL'),
+})
+
+/**
+ * A buyer enquiry. Submitted by anonymous visitors, so it is the least trusted
+ * input in the app: everything is length-capped, and at least one way to reply
+ * is required or the lead is useless to the agent.
+ */
+export const leadSchema = z
+  .object({
+    name: z.string().trim().min(2, 'Enter your name').max(120),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .max(200)
+      .transform((value) => (value === '' ? null : value))
+      .refine(
+        (value) => value === null || z.string().email().safeParse(value).success,
+        'Enter a valid email address',
+      ),
+    phone: z
+      .string()
+      .trim()
+      .max(40)
+      .transform((value) => (value === '' ? null : value)),
+    message: z
+      .string()
+      .trim()
+      .min(5, 'Add a short message')
+      .max(2000, 'Keep your message under 2000 characters'),
+    /**
+     * Honeypot. Hidden from real users with CSS, so anything in here means a bot
+     * filled every field it could find. Named "website" because that is what
+     * scrapers look for.
+     *
+     * Deliberately accepts any string rather than enforcing empty. Validating it
+     * would return 400 and tell the bot exactly which field is the trap; instead
+     * the route sees the value, discards the submission, and replies 200 as if
+     * it worked. Length-capped only so a huge payload can't be posted.
+     */
+    website: z.string().max(500).optional(),
+  })
+  .refine((data) => data.email !== null || data.phone !== null, {
+    message: 'Add an email address or a phone number so the agent can reply',
+    path: ['email'],
+  })
+
+export type LeadInput = z.output<typeof leadSchema>

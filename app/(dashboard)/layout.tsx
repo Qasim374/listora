@@ -1,8 +1,12 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { and, count, eq, isNull } from 'drizzle-orm'
+
 import { SignOutButton } from '@/components/sign-out-button'
 import { getCurrentAgent } from '@/lib/auth/current-agent'
+import { db } from '@/lib/db'
+import { leads } from '@/lib/db/schema'
 import { envFlag } from '@/lib/env'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +23,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
    */
   if (!agent) redirect('/login')
 
+  // Unread count for the nav badge — the whole point of capturing leads is that
+  // the agent notices them.
+  const [unread] = await db
+    .select({ value: count() })
+    .from(leads)
+    .where(and(eq(leads.agentId, agent.id), isNull(leads.readAt)))
+
+  const unreadLeads = unread?.value ?? 0
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-sand-200 bg-sand-50">
@@ -30,6 +43,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <nav className="flex gap-4 text-sm">
               <Link href="/dashboard" className="text-ink-soft hover:text-ink">
                 Listings
+              </Link>
+              <Link
+                href="/dashboard/leads"
+                className="flex items-center gap-1.5 text-ink-soft hover:text-ink"
+              >
+                Enquiries
+                {unreadLeads > 0 ? (
+                  <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-medium text-sand-50">
+                    {unreadLeads}
+                  </span>
+                ) : null}
+              </Link>
+              <Link href="/dashboard/settings" className="text-ink-soft hover:text-ink">
+                Profile
               </Link>
             </nav>
           </div>
