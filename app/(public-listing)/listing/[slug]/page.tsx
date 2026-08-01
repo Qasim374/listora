@@ -67,14 +67,57 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!data) return { title: 'Listing not found' }
 
-  const { listing } = data
+  const { listing, images } = data
+
+  const title = listing.aiHeadline ?? listing.address
+
+  /**
+   * Lead with the price, because the preview card is often all a buyer reads
+   * before deciding whether to tap. Falls back to the description when no price
+   * is set.
+   */
+  const prefix = listing.price !== null ? `${formatPrice(listing.price, listing.market)} · ` : ''
+  const body = (listing.aiDescription ?? listing.address).replace(/\s+/g, ' ').trim()
+
+  // Budget the whole string, not just the body: slicing the body to 150 and then
+  // prepending the price overran what preview cards actually display.
+  const LIMIT = 160
+  const description =
+    prefix.length + body.length <= LIMIT
+      ? `${prefix}${body}`
+      : `${prefix}${body.slice(0, Math.max(0, LIMIT - prefix.length - 1)).trimEnd()}…`
+
+  /**
+   * The photo shown in WhatsApp / iMessage / Facebook link previews.
+   *
+   * Without this the card is text-only — which for a product whose whole job is
+   * "send one link to a buyer" wastes the most persuasive asset the listing has.
+   *
+   * Floor plans are excluded: a diagram is a poor first impression. Prefers the
+   * agent's chosen cover, else the first photo.
+   */
+  const photos = images.filter((image) => !image.isFloorPlan)
+  const cover = photos.find((image) => image.isCover) ?? photos[0]
 
   return {
-    title: listing.aiHeadline ?? listing.address,
-    description: listing.aiDescription?.slice(0, 155) ?? listing.address,
+    title,
+    description,
+    alternates: { canonical: `/listing/${listing.slug}` },
     openGraph: {
-      title: listing.aiHeadline ?? listing.address,
-      description: listing.aiDescription?.slice(0, 155) ?? listing.address,
+      type: 'website',
+      title,
+      description,
+      url: `/listing/${listing.slug}`,
+      siteName: 'Listora',
+      // Blob URLs are already absolute, which og:image requires.
+      images: cover ? [{ url: cover.url, alt: title }] : undefined,
+    },
+    twitter: {
+      // Large card rather than a thumbnail — the photo is the point.
+      card: cover ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: cover ? [cover.url] : undefined,
     },
   }
 }
